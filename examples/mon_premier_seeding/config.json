@@ -1,0 +1,62 @@
+{
+  "api_base_url": "https://votre-api.example.com/api",
+  "global_headers": {
+    "Authorization": "Bearer VOTRE_TOKEN_SECRET"
+  },
+  "integration_steps": [
+    {
+      "name": "Chargement Utilisateurs",
+      "enabled": true,
+      "source_file": "data/utilisateurs.xlsx",
+      "endpoint": "/users",
+      "method": "POST",
+      "lookup_key_column": "email",
+      "response_id_field": "id",
+      "payload_mapping": {
+        "email": "email",
+        "fullName": "nom_complet",
+        "status": "statut"
+      }
+    },
+    {
+      "name": "Chargement Produits",
+      "enabled": true,
+      "source_file": "data/produits.xlsx",
+      "endpoint": "/products",
+      "method": "POST",
+      "lookup_key_column": "sku",
+      "response_id_field": "productId",
+      "payload_mapping": {
+        "sku": "sku",
+        "name": "nom_produit",
+        "price": "prix",
+        "tags": {
+          "source_column": "tags",
+          "split_by": ","
+        }
+      }
+    },
+    {
+      "name": "Chargement Commandes",
+      "enabled": true,
+      "source_file": "data/commandes.xlsx",
+      "endpoint": "/orders",
+      "method": "POST",
+      "payload_mapping": {
+        "orderReference": "ref_commande",
+        "customerInfo": {
+          "userId": "${Chargement Utilisateurs.id:email_client}"
+        },
+        "items": {
+          "source_file": "data/lignes_commande.xlsx",
+          "link_column_parent": "ref_commande",
+          "link_column_child": "ref_commande_parente",
+          "mapping": {
+            "productId": "${Chargement Produits.id:produit_sku}",
+            "quantity": "quantite"
+          }
+        }
+      }
+    }
+  ]
+}
