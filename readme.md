@@ -54,42 +54,52 @@ Lancez la commande `template` en fournissant le chemin vers votre fichier de con
 
 ## Pour les Développeurs
 
-Cette section est pour ceux qui souhaitent modifier ou étendre le code source de API Seeder.
+Cette section est pour ceux qui souhaitent modifier, étendre ou simplement exécuter le code source de API Seeder.
 
 ### 1. Mise en Place de l'Environnement
 
-Le projet utilise un environnement virtuel pour gérer ses dépendances de manière isolée.
+Le projet utilise un environnement virtuel pour gérer ses dépendances de manière isolée, garantissant que chaque projet a sa propre "boîte à outils" sans conflit.
 
 ```bash
-# 1. Clonez le dépôt Git
+# 1. Clonez le dépôt Git depuis votre gestionnaire de sources
 git clone <url_du_depot>
 cd api-seeder
 
-# 2. Créez l'environnement virtuel
+# 2. Créez l'environnement virtuel (nous l'appelons "venv")
 python -m venv venv
 
-# 3. Activez l'environnement
-# Sur Windows:
+# 3. Activez l'environnement. C'est une étape cruciale !
+#    Votre invite de commande devrait maintenant afficher (venv) au début.
+# Sur Windows (cmd ou PowerShell):
 # .\venv\Scripts\activate
 # Sur macOS/Linux:
 source venv/bin/activate
 
-# 4. Installez le projet et ses dépendances en mode "éditable"
-# Cette commande lit pyproject.toml et crée la commande "api-seeder"
+# 4. Installez le projet en mode "éditable"
+#    Cette commande lit le fichier pyproject.toml, installe les dépendances
+#    (pandas, requests, etc.) DANS votre venv, et crée la commande "api-seeder"
+#    qui pointe directement vers votre code source.
 pip install -e .
 ```
 
-### 2. Lancer depuis le Code Source
+**Qu'est-ce que `pip install -e .` ?**
+
+L'option `-e` signifie "editable" (éditable). C'est la commande la plus importante pour le développement. Elle crée un lien entre la commande `api-seeder` (disponible dans votre terminal) et votre code source dans le dossier `src/`.
+
+**L'avantage majeur :** Vous pouvez modifier votre code (`core.py`, `payload.py`, etc.), sauvegarder les fichiers, et **exécuter immédiatement `api-seeder` dans votre terminal pour voir vos changements**, sans avoir besoin de réinstaller quoi que ce soit.
+
+### 2. Tester l'Application en Cours de Développement
 
 Une fois l'environnement mis en place, vous pouvez lancer les commandes directement. Assurez-vous que votre environnement virtuel `(venv)` est activé.
 
 ```bash
-# Lancer une synchronisation
+# Lancer une synchronisation pour tester vos modifications
 api-seeder sync examples/mon_premier_seeding/config.json
 
 # Lancer le générateur de modèles
 api-seeder template examples/mon_premier_seeding/config.json -o ./output_test
 ```
+Pour un débogage pas à pas, configurez votre éditeur de code (VS Code, PyCharm) pour qu'il utilise l'interpréteur Python de votre `venv` et exécute le module `src.api_seeder.main` avec les arguments nécessaires (ex: `sync examples/mon_premier_seeding/config.json`).
 
 ### 3. Structure du Code
 
@@ -107,11 +117,11 @@ Le code est segmenté en modules avec des responsabilités claires dans le dossi
 Si vous avez apporté des modifications et que vous souhaitez packager une nouvelle version de l'exécutable autonome :
 
 1.  Assurez-vous que votre environnement virtuel est activé.
-2.  Installez PyInstaller : `pip install pyinstaller`.
+2.  Installez PyInstaller **dans votre venv** : `pip install pyinstaller`.
 3.  Lancez la commande de construction depuis la **racine** du projet :
 
     ```bash
-    pyinstaller --name API-Seeder --onefile --console src/api_seeder/main.py
+    pyinstaller --name API-Seeder --onefile --console --add-data "src/api_seeder;api_seeder" --hidden-import "pandas" --hidden-import "requests" --hidden-import "openpyxl" run.py
     ```
 
 Le nouvel exécutable se trouvera dans le dossier `dist/`.
