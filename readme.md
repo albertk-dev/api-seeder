@@ -1,79 +1,117 @@
-# API seeder v1.0
+# API Seeder v1.2
 
-Un outil en ligne de commande simple et puissant pour charger et intégrer des données depuis des fichiers Excel vers une API web. Il gère les dépendances complexes, les objets imbriqués et les tableaux d'objets grâce à un unique fichier de configuration `config.json`.
+Un outil en ligne de commande puissant pour synchroniser des données depuis des fichiers Excel vers une API web. Il est conçu pour être robuste, relançable et gérer des dépendances complexes.
 
-## Fonctionnalités
+## Fonctionnalités Clés
 
-*   **Piloté par la configuration** : Pas de code à toucher. Décrivez votre intégration dans un fichier JSON.
-*   **Gestion des dépendances** : Créez des entités (ex: des utilisateurs), récupérez leurs ID, et injectez-les automatiquement dans la création d'entités dépendantes (ex: des commandes).
-*   **Structure de données complexe** : Mappez facilement les colonnes Excel vers des objets JSON imbriqués et des tableaux d'objets.
-*   **Rapports d'erreurs** : Chaque enregistrement qui échoue est capturé dans un fichier Excel séparé pour analyse, avec la raison de l'échec.
-*   **Autonome** : L'outil est un exécutable unique qui ne nécessite pas d'installation de Python ou de bibliothèques.
-
-## Comment l'utiliser ?
-
-1.  **Téléchargez** le dossier `.zip` de la dernière version et décompressez-le.
-2.  **Copiez le dossier d'exemple** : Le dossier contient un exécutable `API seeder` et un dossier `examples`. Copiez le dossier `examples/premier_projet` et renommez-le pour votre propre projet.
-3.  **Préparez vos données** : Remplissez ou remplacez les fichiers Excel dans le sous-dossier `data/` avec vos propres données.
-4.  **Configurez l'intégration** : Ouvrez le fichier `config.json` et modifiez-le pour qu'il corresponde à votre API et à vos fichiers de données (voir le guide de configuration ci-dessous).
-5.  **Lancez l'outil** : Ouvrez un terminal (ou `cmd` / `PowerShell` sur Windows), naviguez jusqu'à votre dossier de projet et lancez la commande :
-
-    ```bash
-    # Sur Windows
-    .\API seeder.exe config.json
-
-    # Sur macOS / Linux
-    ./API seeder config.json
-    ```
-
-## Guide de Configuration (`config.json`)
-
-Le fichier `config.json` est le cœur de l'outil. Voici la description de chaque champ.
-
-### Structure Générale
-
-```json
-{
-  "api_base_url": "https://votre-api.com/api",
-  "global_headers": { "Authorization": "Bearer TOKEN" },
-  "integration_steps": [ /* ... vos étapes ici ... */ ]
-}
-```
-*   `api_base_url`: (Requis) L'URL de base de votre API.
-*   `global_headers`: (Optionnel) En-têtes HTTP à envoyer avec chaque requête (ex: authentification).
-
-### Structure d'une Étape (`integration_steps`)
-
-C'est un tableau d'objets, exécutés dans l'ordre.
-
-| Clé | Description | Exemple |
-| :--- | :--- | :--- |
-| `name` | **Requis.** Un nom unique pour l'étape. Sert de référence pour les dépendances. | `"Chargement Utilisateurs"` |
-| `enabled` | `true` ou `false`. Permet de désactiver une étape sans la supprimer. | `true` |
-| `source_file` | **Requis.** Chemin relatif vers le fichier Excel source. | `"data/utilisateurs.xlsx"` |
-| `endpoint` | **Requis.** Le chemin de l'API pour cette ressource. | `"/users"` |
-| `method` | La méthode HTTP à utiliser. | `"POST"` |
-| `lookup_key_column`| **Crucial pour les dépendances.** Colonne du `source_file` contenant une valeur unique (ex: email, SKU). | `"email"` |
-| `response_id_field`| **Crucial pour les dépendances.** Nom du champ dans la réponse de l'API qui contient l'ID à stocker. | `"id"` |
-| `payload_mapping` | **Requis.** L'objet qui décrit comment construire le JSON envoyé à l'API. | `{...}` |
-
-### Guide du `payload_mapping`
-
-| Cas d'usage | Syntaxe dans `payload_mapping` | JSON Résultant |
-| :--- | :--- | :--- |
-| **Propriété simple** | `"api_key": "excel_column"` | `{ "api_key": "valeur_de_la_colonne" }` |
-| **Valeur statique** | `"source": "MonScript"` | `{ "source": "MonScript" }` |
-| **Objet imbriqué** | `"user": { "name": "nom", "city": "ville" }` | `{ "user": { "name": "...", "city": "..." } }` |
-| **Dépendance (ID)** | `"userId": "${Nom Etape Parent.id:colonne_lookup}"` | `{ "userId": "id_recupere_de_l'etape_parent" }` |
-| **Tableau simple**<br>(valeurs en `a,b,c`) | `"tags": { "source_column": "tags_col", "split_by": "," }` | `{ "tags": ["a", "b", "c"] }` |
-| **Tableau d'objets** | `"items": { "source_file": "...", "link_column_parent": "...", "link_column_child": "...", "mapping": {...} }` | `{ "items": [ {..}, {..} ] }` |
+*   **Philosophie de Synchronisation** : L'outil cherche les entités avant de les créer, évitant les doublons et gérant les erreurs `409 Conflict` intelligemment.
+*   **Piloté par la Configuration** : Toute la logique d'intégration est décrite dans un unique fichier `config.json`. Pas de code à modifier pour de nouvelles intégrations.
+*   **Gestion des Dépendances Complexes** : Capture les ID des entités parentes et les injecte automatiquement dans les entités enfants, même à travers plusieurs exécutions grâce à un cache.
+*   **Rapports d'Erreurs Détaillés** : Chaque enregistrement qui échoue est capturé dans un fichier Excel, incluant la **ligne exacte** du fichier source et la réponse d'erreur de l'API.
+*   **Générateur de Modèles** : Une sous-commande pour générer automatiquement la structure de dossiers et les fichiers Excel vides, prêts à être remplis.
+*   **Modes Flexibles** : Utilisez le mode `sync` pour créer et mettre à jour, ou le mode `lookup_only` pour découvrir des données préexistantes sans les modifier.
 
 ---
-## Pour les développeurs
 
-Si vous voulez modifier le code source :
+## Guide d'Utilisation
 
-1.  Clonez le dépôt.
-2.  Installez les dépendances : `pip install -e .`
-3.  Lancez depuis la source : `python src/data_integrator/main.py examples/premier_projet/config.json`
-4.  Reconstruisez l'exécutable : `pyinstaller --name API seeder --onefile --console src/data_integrator/main.py`
+### 1. Installation et Préparation
+
+1.  **Téléchargez** le dossier `.zip` de la dernière version et décompressez-le.
+2.  **Copiez le dossier d'exemple** : Le dossier contient l'exécutable `API-Seeder` et un dossier `examples`. Copiez le dossier `examples/mon_premier_seeding` et renommez-le pour votre propre projet.
+3.  **Préparez vos données** : Remplissez ou remplacez les fichiers Excel dans le sous-dossier `data/` avec vos propres données.
+4.  **Configurez l'intégration** : Ouvrez le fichier `config.json` et modifiez-le pour qu'il corresponde à votre API et à vos fichiers. (Un guide de configuration complet est disponible dans le dossier `docs/`).
+
+### 2. Lancer la Synchronisation
+
+Ouvrez un terminal (ou `cmd` / `PowerShell` sur Windows), naviguez jusqu'au dossier de votre projet et lancez la commande `sync`.
+
+```bash
+# Sur Windows
+.\API-Seeder.exe sync chemin\vers\votre\config.json
+
+# Sur macOS / Linux
+./API-Seeder sync chemin/vers/votre/config.json
+```
+
+### 3. Outil d'Aide : Générateur de Modèles Excel
+
+Pour démarrer un nouveau projet rapidement et sans erreurs, utilisez le générateur de modèles. Il lit votre `config.json` et crée automatiquement la structure de dossiers et les fichiers Excel vides, avec les bonnes colonnes.
+
+#### Comment l'utiliser ?
+
+Lancez la commande `template` en fournissant le chemin vers votre fichier de configuration.
+
+```bash
+# Utilisation de base (génère dans un dossier nommé "templates_excel")
+./API-Seeder template chemin/vers/votre/config.json
+
+# Spécifier un dossier de sortie personnalisé
+./API-Seeder template chemin/vers/votre/config.json --output ./mes_fichiers_excel
+```
+
+---
+
+## Pour les Développeurs
+
+Cette section est pour ceux qui souhaitent modifier ou étendre le code source de API Seeder.
+
+### 1. Mise en Place de l'Environnement
+
+Le projet utilise un environnement virtuel pour gérer ses dépendances de manière isolée.
+
+```bash
+# 1. Clonez le dépôt Git
+git clone <url_du_depot>
+cd api-seeder
+
+# 2. Créez l'environnement virtuel
+python -m venv venv
+
+# 3. Activez l'environnement
+# Sur Windows:
+# .\venv\Scripts\activate
+# Sur macOS/Linux:
+source venv/bin/activate
+
+# 4. Installez le projet et ses dépendances en mode "éditable"
+# Cette commande lit pyproject.toml et crée la commande "api-seeder"
+pip install -e .
+```
+
+### 2. Lancer depuis le Code Source
+
+Une fois l'environnement mis en place, vous pouvez lancer les commandes directement. Assurez-vous que votre environnement virtuel `(venv)` est activé.
+
+```bash
+# Lancer une synchronisation
+api-seeder sync examples/mon_premier_seeding/config.json
+
+# Lancer le générateur de modèles
+api-seeder template examples/mon_premier_seeding/config.json -o ./output_test
+```
+
+### 3. Structure du Code
+
+Le code est segmenté en modules avec des responsabilités claires dans le dossier `src/api_seeder/` :
+
+*   `main.py`: Point d'entrée de la CLI, gère les sous-commandes et l'orchestration de haut niveau.
+*   `core.py`: Contient la logique principale de synchronisation pour une étape (`run_integration_step`).
+*   `payload.py`: Responsable de la construction récursive du payload JSON.
+*   `cache.py`: Gère la lecture et l'écriture du cache d'ID (`.id_cache.json`).
+*   `api_client.py`: Centralise tous les appels HTTP `requests`.
+*   `generator.py`: Contient la logique pour le générateur de modèles.
+
+### 4. Reconstruire l'Exécutable
+
+Si vous avez apporté des modifications et que vous souhaitez packager une nouvelle version de l'exécutable autonome :
+
+1.  Assurez-vous que votre environnement virtuel est activé.
+2.  Installez PyInstaller : `pip install pyinstaller`.
+3.  Lancez la commande de construction depuis la **racine** du projet :
+
+    ```bash
+    pyinstaller --name API-Seeder --onefile --console src/api_seeder/main.py
+    ```
+
+Le nouvel exécutable se trouvera dans le dossier `dist/`.

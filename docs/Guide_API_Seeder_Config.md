@@ -375,3 +375,30 @@ Le script voit `"_placeholder"` et comprend qu'il doit créer un tableau de vale
   "technologyIds": [22, 15]
 }
 ```
+
+
+---
+
+## Outil d'Aide : Générateur de Modèles Excel
+
+Pour vous aider à démarrer un nouveau projet d'intégration rapidement et sans erreurs, API Seeder inclut un générateur de modèles. Cet outil lit votre `config.json` et crée automatiquement toute la structure de dossiers et tous les fichiers Excel vides, avec les bonnes colonnes déjà en place.
+
+### Comment l'utiliser ?
+
+Ouvrez un terminal et lancez la commande `template`. Vous devez fournir le chemin vers votre fichier de configuration et, optionnellement, un dossier de sortie.
+
+```bash
+# Utilisation de base (génère dans un dossier nommé "templates_excel")
+api-seeder template chemin/vers/votre/config.json
+
+# Spécifier un dossier de sortie personnalisé
+api-seeder template chemin/vers/votre/config.json --output ./mes_fichiers_excel
+```
+
+### Que fait-il ?
+
+1.  **Analyse** votre `config.json` pour trouver tous les `source_file` et les colonnes requises.
+2.  **Crée** la structure de dossiers (ex: `data/parametrage/`, `data/operateurs/`).
+3.  **Génère** des fichiers `.xlsx` vides contenant uniquement la ligne d'en-tête, prêts à être remplis.
+
+Cela élimine les devinettes et les erreurs de frappe lors de la préparation de vos données.

@@ -52,7 +52,20 @@ def build_payload(row: pd.Series, mapping: Dict[str, Any]) -> Optional[Dict[str,
     """
     payload: Dict[str, Any] = {}
     for key, value in mapping.items():
-        if isinstance(value, dict):
+           if isinstance(value, list):
+            # C'est un tableau d'objets statiques. On le traite.
+            processed_list = []
+            for item_mapping in value:
+                # On appelle récursivement build_payload pour chaque objet de la liste !
+                processed_item = build_payload(row, item_mapping)
+                if processed_item:
+                    # On ne garde l'item que si sa valeur n'est pas vide/nulle
+                    if processed_item.get("value"): 
+                        processed_list.append(processed_item)
+            if processed_list:
+                payload[key] = processed_list
+        
+           elif isinstance(value, dict):
             # --- MODIFICATION DE LA LOGIQUE ICI ---
             # Cas 1: Tableau (d'objets ou de valeurs simples) depuis un autre fichier
             if "source_file" in value:
@@ -87,7 +100,7 @@ def build_payload(row: pd.Series, mapping: Dict[str, Any]) -> Optional[Dict[str,
             # Cas 3: Objet JSON imbriqué
             else:
                 payload[key] = build_payload(row, value)
-        elif isinstance(value, str):
+           elif isinstance(value, str):
             # Cas 4: Dépendance à résoudre
             if value.startswith('${'):
                 resolved_value = resolve_placeholder(value, row)
@@ -99,7 +112,7 @@ def build_payload(row: pd.Series, mapping: Dict[str, Any]) -> Optional[Dict[str,
             # Cas 6: Valeur statique (chaîne de caractères)
             else:
                 payload[key] = value
-        else:
+           else:
              # Cas 7: Valeur statique (nombre, booléen, etc.)
              payload[key] = value
     return payload
