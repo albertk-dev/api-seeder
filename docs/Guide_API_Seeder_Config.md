@@ -1,185 +1,377 @@
+# GUIDE COMPLET DE CONFIGURATION POUR API SEEDER
 
-### GUIDE COMPLET DE CONFIGURATION POUR API SEEDER (`config.json`)
+## I. Introduction
 
-#### **INTRODUCTION**
+Bienvenue dans le guide de **API Seeder**. Cet outil vous permet de synchroniser des données depuis des fichiers Excel vers l'API **PATNUC SIG** de manière intelligente et robuste.
 
-Le fichier `config.json` est le cœur de l'outil API Seeder. Il vous permet de décrire un processus d'intégration de données complexe sans écrire une seule ligne de code.
+### La Philosophie : Synchroniser, pas seulement Pousser
 
-**Philosophie** : "Dis-moi ce que tu veux faire, pas comment le faire."
+API Seeder est plus qu'un simple outil d'import. Il est conçu pour être **idempotent**, ce qui signifie que vous pouvez le lancer plusieurs fois avec les mêmes données sans créer de doublons ou causer d'erreurs. Il suit une logique simple mais puissante :
 
-Ce guide explique chaque option disponible, des plus simples aux plus complexes.
+1. **Chercher** : Pour chaque ligne de votre fichier Excel, il vérifie d'abord si l'entité (une station, un équipement, etc.) existe déjà dans l'API.
+2. **Agir** :
+   - Si l'entité n'existe pas, il la **crée**.
+   - Si l'entité existe déjà, il passe à la suite, évitant ainsi les erreurs de conflit (`409 Conflict`).
+3. **Mémoriser** : Il capture l'ID de l'entité (qu'elle soit nouvelle ou existante) et le sauvegarde dans un cache pour l'utiliser dans les étapes dépendantes (par exemple, pour lier un équipement à sa station).
+
+Ce document vous guidera à travers toutes les options de configuration pour maîtriser l'outil.
 
 ---
 
-#### **1. STRUCTURE GÉNÉRALE**
+## II. Structure Globale du `config.json`
 
-Le fichier `config.json` est un objet JSON qui contient 3 clés principales à sa racine :
+Le fichier `config.json` est le seul fichier que vous avez à modifier. Il est composé de sections principales à sa racine.
+
+### Exemple de structure de base
 
 ```json
 {
-  "api_base_url": "https://votre-api.example.com/api",
+  "api_base_url": "http://localhost:8080/api",
   "global_headers": {
-    "Authorization": "Bearer VOTRE_TOKEN_SECRET"
+    "Authorization": "Bearer VOTRE_TOKEN_API_JWT"
   },
+  "use_id_cache": true,
   "integration_steps": [
-    // ... La liste de vos étapes d'intégration vient ici ...
+    // ... La liste de vos étapes de synchronisation vient ici ...
   ]
 }
 ```
 
+### Paramètres de configuration
+
 | Clé | Description | Obligatoire ? |
-| :--- | :--- | :--- |
+|:----|:------------|:-------------|
 | `api_base_url` | L'URL de base de votre API. L'endpoint de chaque étape sera ajouté à la fin de cette URL. | **Oui** |
 | `global_headers` | Un objet contenant les en-têtes HTTP à envoyer avec **chaque** requête. Parfait pour l'authentification. | Non |
-| `integration_steps` | Un **tableau** d'objets où chaque objet représente une étape de chargement. **L'ordre des étapes dans ce tableau est crucial.** | **Oui** |
+| `use_id_cache` | Si `true`, l'outil sauvegarde les ID trouvés dans un fichier `.id_cache.json`. Cela permet les exécutions en plusieurs fois et la reprise sur erreur. **Il est fortement recommandé de le laisser à `true`**. | Non (défaut: `true`) |
+| `integration_steps` | Un **tableau** d'objets où chaque objet représente une étape de synchronisation. **L'ordre des étapes dans ce tableau est crucial.** | **Oui** |
 
 ---
 
-#### **2. ANATOMIE D'UNE ÉTAPE D'INTÉGRATION**
+## III. Anatomie d'une Étape (`integration_steps`)
 
-Chaque objet dans le tableau `integration_steps` est une tâche de chargement. Voici un aperçu de toutes les clés possibles :
+Chaque objet dans le tableau `integration_steps` est une tâche de synchronisation. Voici toutes les clés qui la définissent.
+
+### Paramètres d'une étape
+
+| Clé | Description | Obligatoire ? |
+|:----|:------------|:-------------|
+| `name` | **(Crucial)** Un nom unique et lisible pour l'étape. Il sert de **référence** pour les dépendances. | **Oui** |
+| `enabled` | `true` ou `false`. Permet de désactiver temporairement une étape. Idéal pour les tests. | Non (défaut: `true`) |
+| `mode` | Définit le comportement de l'étape : `"sync"` (défaut) ou `"lookup_only"`. | Non (défaut: `"sync"`) |
+| `source_file` | Le chemin relatif (depuis `config.json`) vers le fichier Excel contenant les données. | **Oui** |
+| `endpoint` | Le chemin de l'API pour **créer** une ressource (ex: `/stations`). Utilisé uniquement en mode `sync`. | **Oui** (en mode `sync`) |
+| `lookup_key_column` | La colonne du `source_file` contenant une valeur **unique** (ex: email, référence) pour identifier chaque enregistrement. | **Oui** |
+| `response_id_field` | Le nom du champ dans la réponse JSON de l'API qui contient l'ID unique que l'outil doit capturer. | **Oui** |
+| `id_lookup_config` | **(Crucial)** Un objet qui définit **comment chercher** une entité. | **Oui** |
+| `payload_mapping` | L'objet qui décrit comment construire le corps JSON pour la **création** d'une entité. | **Oui** (en mode `sync`) |
+
+---
+
+## IV. Modes d'Exécution et Configuration de la Recherche
+
+### Mode `"sync"` (par défaut)
+
+- **Logique** : Pour chaque ligne Excel → Cherche l'entité. Si elle n'existe pas, la crée.
+- **Cas d'usage** : Chargement initial, ajout de nouvelles données, relances sécurisées.
+
+#### Exemple de configuration `sync`
 
 ```json
 {
-  "name": "Chargement Utilisateurs",
-  "enabled": true,
-  "source_file": "data/utilisateurs.xlsx",
-  "endpoint": "/users",
-  "method": "POST",
-  "lookup_key_column": "email",
+  "name": "Synchronisation Technologies",
+  "mode": "sync",
+  "source_file": "data/parametrage/technologies.xlsx",
+  "endpoint": "/technologies",
+  "lookup_key_column": "nom_technologie",
   "response_id_field": "id",
-  "id_lookup_on_creation": {
-    // ... configuration avancée ...
+  "id_lookup_config": {
+    "lookup_endpoint": "/technologies",
+    "lookup_query_param": "search"
   },
   "payload_mapping": {
-    // ... configuration du corps de la requête ...
+    "name": "nom_technologie",
+    "description": "description_technologie",
+    "activitySector": "secteur_activite"
   }
 }
 ```
 
-| Clé | Description | Obligatoire ? |
-| :--- | :--- | :--- |
-| `name` | **(Crucial)** Un nom unique et lisible pour l'étape. Il sert de **référence** pour les dépendances. | **Oui** |
-| `enabled` | `true` ou `false`. Permet de désactiver temporairement une étape sans la supprimer. Idéal pour les tests. | Non (défaut: `true`) |
-| `source_file` | Le chemin relatif (depuis `config.json`) vers le fichier Excel contenant les données. | **Oui** |
-| `endpoint` | Le chemin de l'API pour cette ressource. Sera concaténé avec `api_base_url`. | **Oui** |
-| `method` | La méthode HTTP à utiliser. Typiquement `POST` pour créer, `PUT` ou `PATCH` pour mettre à jour. | Non (défaut: `POST`) |
-| `lookup_key_column` | La colonne du `source_file` contenant une valeur **unique** (ex: email, référence). | **Oui** (si l'étape est un parent) |
-| `response_id_field` | Le nom du champ dans la **réponse JSON de l'API** qui contient l'ID unique que l'outil doit capturer. | **Oui** (si l'étape est un parent) |
-| `id_lookup_on_creation` | **(Avancé)** Un objet pour configurer une recherche de secours si l'API ne renvoie pas l'ID directement. Voir section 4. | Non |
-| `payload_mapping` | L'objet qui décrit comment construire le corps JSON de la requête. C'est la partie la plus importante. | **Oui** |
+### Mode `"lookup_only"` (Recherche Seule)
+
+- **Logique** : Pour chaque ligne Excel → Cherche l'entité, récupère son ID, et le met en cache. **Ne crée jamais rien.**
+- **Cas d'usage** : Les opérateurs existent déjà en base de données. On veut juste charger leurs stations sans risquer de recréer les opérateurs.
+
+#### Exemple de configuration `lookup_only`
+
+```json
+{
+  "name": "Découverte Opérateurs",
+  "mode": "lookup_only",
+  "source_file": "data/operateurs/organisations.xlsx",
+  "lookup_key_column": "nom_organisation",
+  "response_id_field": "id",
+  "id_lookup_config": {
+    "lookup_endpoint": "/organizations",
+    "lookup_query_param": "filter.name"
+  }
+}
+```
 
 ---
 
-#### **3. LE GUIDE DU `payload_mapping` : CONSTRUIRE LE JSON**
+## V. Le Guide Ultime du `payload_mapping` (avec Exemples)
 
-C'est ici que vous définissez la structure exacte du corps de la requête (le payload) envoyé à l'API.
+Cette section est le cœur de votre configuration. Elle est utilisée uniquement en mode `"sync"` pour construire le corps JSON de la requête de création.
 
-**Cas 1 : Mapping simple**  
-*Objectif : La clé `emailAddress` du JSON prend la valeur de la colonne `email` de l'Excel.*
+### Cas 1 : Mapping Simple
 
+**Objectif** : Associer directement une colonne Excel à une clé JSON.
+
+**Fichier `technologies.xlsx`** :
+
+| nom_technologie | description_technologie |
+|:----------------|:----------------------|
+| Fibre Optique | Connexion par fibre optique... |
+
+**Configuration** :
 ```json
 "payload_mapping": {
-  "emailAddress": "email"
+  "name": "nom_technologie",
+  "description": "description_technologie"
 }
 ```
 
-**Cas 2 : Valeur statique**  
-*Objectif : Ajouter un champ `source` qui a toujours la même valeur.*
-
+**JSON généré** :
 ```json
-"payload_mapping": {
-  "source": "InitialSeedingScript"
+{
+  "name": "Fibre Optique",
+  "description": "Connexion par fibre optique..."
 }
 ```
 
-**Cas 3 : Objet imbriqué**  
-*Objectif : Créer un objet `address` à l'intérieur du JSON principal.*
+---
 
+### Cas 2 : Valeur Statique
+
+**Objectif** : Ajouter des champs au JSON qui ont toujours la même valeur, non issue de l'Excel.
+
+**Fichier `organisations.xlsx`** :
+
+| nom_organisation |
+|:----------------|
+| Opérateur A |
+
+**Configuration** :
 ```json
 "payload_mapping": {
-  "address": {
-    "street": "rue",
-    "city": "ville",
-    "country": "France"
+  "name": "nom_organisation",
+  "organizationType": "OPERATOR",
+  "activitySector": ["TELECOMMUNICATION"]
+}
+```
+
+**JSON généré** :
+```json
+{
+  "name": "Opérateur A",
+  "organizationType": "OPERATOR",
+  "activitySector": ["TELECOMMUNICATION"]
+}
+```
+
+---
+
+### Cas 3 : Objet Imbriqué
+
+**Objectif** : Créer un objet JSON à l'intérieur du payload principal.
+
+**Fichier `utilisateurs.xlsx`** :
+
+| prenom | nom |
+|:-------|:----|
+| Jean | Dupont |
+
+**Configuration** (hypothétique, si votre API attendait un objet `contact`) :
+```json
+"payload_mapping": {
+  "contactDetails": {
+    "firstName": "prenom",
+    "lastName": "nom"
   }
 }
 ```
 
-**Cas 4 : Tableau simple (depuis une chaîne de caractères)**  
-*Objectif : Transformer la chaîne `coton,ete,bleu` de la colonne `tags` en un tableau JSON.*
+**JSON généré** :
+```json
+{
+  "contactDetails": {
+    "firstName": "Jean",
+    "lastName": "Dupont"
+  }
+}
+```
 
+---
+
+### Cas 4 : Tableau Simple (depuis une chaîne de caractères)
+
+**Objectif** : Transformer une chaîne de caractères (ex: `TELECOMMUNICATION,TRANSPORT`) en un tableau JSON.
+
+**Fichier `organisations.xlsx`** :
+
+| nom_organisation | secteurs_activite |
+|:----------------|:------------------|
+| Opérateur B | TELECOMMUNICATION,TRANSPORT |
+
+**Configuration** :
 ```json
 "payload_mapping": {
-  "tags": {
-    "source_column": "tags",
+  "name": "nom_organisation",
+  "activitySector": {
+    "source_column": "secteurs_activite",
     "split_by": ","
   }
 }
 ```
 
-**Cas 5 : Dépendance (Récupérer un ID)**  
-*Objectif : Injecter l'ID d'un utilisateur, créé à une étape précédente, dans un champ `userId`.*
-
+**JSON généré** :
 ```json
-"payload_mapping": {
-  "userId": "${Chargement Utilisateurs.id:email_client}"
+{
+  "name": "Opérateur B",
+  "activitySector": ["TELECOMMUNICATION", "TRANSPORT"]
 }
 ```
 
-> **Décryptage** : Le script prend la valeur de la colonne `email_client`, cherche l'ID associé dans la mémoire de l'étape `"Chargement Utilisateurs"`, et l'injecte.
+---
 
-**Cas 6 : Tableau d'Objets (Relation un-à-plusieurs)**  
-*Objectif : Pour une commande, créer un tableau `items` en lisant les lignes correspondantes dans un autre fichier Excel.*
+### Cas 5 : Dépendance (Récupérer un ID du Cache)
 
+**Objectif** : Créer une station qui dépend d'une `localité` et d'une `organisation`, dont les ID ont été trouvés à des étapes précédentes.
+
+**Fichier `stations.xlsx`** :
+
+| nom_station | code_localite | nom_proprietaire |
+|:-----------|:--------------|:-----------------|
+| Antenne-Paris-01 | 75056 | Opérateur A |
+
+**Configuration** :
 ```json
 "payload_mapping": {
-  "items": {
-    "source_file": "data/lignes_commande.xlsx",
-    "link_column_parent": "ref_commande",
-    "link_column_child": "ref_commande_parente",
+  "name": "nom_station",
+  "localityId": "${Chargement Localités.id:code_localite}",
+  "organizationId": "${Découverte Opérateurs.id:nom_proprietaire}"
+}
+```
+
+**Logique** :
+1. Le script résout `${Chargement Localités.id:code_localite}` en trouvant l'ID associé à `75056`.
+2. Il résout `${Découverte Opérateurs.id:nom_proprietaire}` en trouvant l'ID associé à `Opérateur A`.
+
+**JSON généré** (avec des ID d'exemple) :
+```json
+{
+  "name": "Antenne-Paris-01",
+  "localityId": 101,
+  "organizationId": 55
+}
+```
+
+---
+
+### Cas 6 : Tableau d'Objets (Relation un-à-plusieurs)
+
+**Objectif** : Créer une liaison (`connection`) qui contient un tableau de points GPS (`path`), en se basant sur un second fichier Excel.
+
+**Fichiers Excel** :
+
+- `liaisons.xlsx`:
+
+| nom_liaison |
+|:-----------|
+| LIA-PAR-LYO-01 |
+
+- `chemins_gps.xlsx`:
+
+| ref_liaison | index_point | latitude | longitude |
+|:-----------|:------------|:---------|:----------|
+| LIA-PAR-LYO-01 | 0 | 48.85 | 2.35 |
+| LIA-PAR-LYO-01 | 1 | 47.21 | 3.98 |
+| LIA-PAR-LYO-01 | 2 | 45.76 | 4.83 |
+
+**Configuration** :
+```json
+"payload_mapping": {
+  "name": "nom_liaison",
+  "path": {
+    "source_file": "data/chemins_gps.xlsx",
+    "link_column_parent": "nom_liaison",
+    "link_column_child": "ref_liaison",
     "mapping": {
-      "productId": "${Chargement Produits.id:produit_sku}",
-      "quantity": "quantite"
+      "index": "index_point",
+      "latitude": "latitude",
+      "longitude": "longitude",
+      "name": "ref_liaison"
     }
   }
 }
 ```
 
-> Le script filtre `lignes_commande.xlsx` en utilisant les colonnes de lien, puis applique le `mapping` interne pour chaque ligne correspondante.
-
----
-
-#### **4. CAS AVANCÉ : RÉCUPÉRATION D'ID VIA RECHERCHE**
-
-**Problème** : Certaines API répondent à une création (`POST`) avec un succès mais **sans** renvoyer l'ID de l'objet créé.
-
-**Solution** : API Seeder peut effectuer une seconde requête (`GET`) pour rechercher l'objet et récupérer son ID.
-
-Ajoutez la section `id_lookup_on_creation` :
-
+**JSON généré** :
 ```json
-"id_lookup_on_creation": {
-  "enabled": true,
-  "lookup_endpoint": "/users",
-  "lookup_query_param": "email"
+{
+  "name": "LIA-PAR-LYO-01",
+  "path": [
+    { "index": "0", "latitude": "48.85", "longitude": "2.35", "name": "LIA-PAR-LYO-01" },
+    { "index": "1", "latitude": "47.21", "longitude": "3.98", "name": "LIA-PAR-LYO-01" },
+    { "index": "2", "latitude": "45.76", "longitude": "4.83", "name": "LIA-PAR-LYO-01" }
+  ]
 }
 ```
 
-| Clé | Description | Obligatoire ? |
-| :--- | :--- | :--- |
-| `enabled` | Mettez à `true` pour activer cette logique de recherche. | Oui |
-| `lookup_endpoint` | L'endpoint à interroger pour la recherche `GET`. | Oui |
-| `lookup_query_param` | Le nom du paramètre de requête utilisé, sa valeur étant prise dans `lookup_key_column`. | Oui |
-
-> Si la réponse du `POST` est vide, l'outil fera `/users?email=valeur` pour récupérer l'ID.
-
 ---
 
-#### **5. ASTUCES ET BONNES PRATIQUES**
+### Cas 7 : Tableau de Valeurs Simples (Tableau d'IDs)
 
-- **Validez votre JSON** : Utilisez un validateur en ligne (comme JSONLint).
-- **Procédez par étapes** : Testez une étape à la fois avant d'ajouter des dépendances.
-- **Utilisez `"enabled": false`** : Pour désactiver temporairement certaines étapes.
-- **Vérifiez les noms de colonnes** : Ils doivent correspondre exactement à ceux des fichiers Excel.
-- **Consultez les fichiers d'erreurs** : `erreurs_Nom_Etape.xlsx` indique les causes d’échec (souvent la réponse de l'API).
+**Objectif** : Créer un équipement et lui assigner une liste d'ID de technologies, à partir d'un fichier de liaison.
+
+**Fichiers Excel** :
+
+- `equipements.xlsx`:
+
+| nom_equipement |
+|:---------------|
+| Antenne-5G-Paris |
+
+- `liaison_equipement_techno.xlsx` (fichier de liaison):
+
+| nom_equipement_parent | nom_technologie |
+|:---------------------|:----------------|
+| Antenne-5G-Paris | 5G |
+| Antenne-5G-Paris | 4G LTE |
+
+**Configuration** :
+```json
+"payload_mapping": {
+  "name": "nom_equipement",
+  "technologyIds": {
+    "source_file": "data/liaison_equipement_techno.xlsx",
+    "link_column_parent": "nom_equipement",
+    "link_column_child": "nom_equipement_parent",
+    "mapping": {
+      "_placeholder": "${Synchronisation Technologies.id:nom_technologie}"
+    }
+  }
+}
+```
+
+**Logique (la magie du `_placeholder`)** :
+Le script voit `"_placeholder"` et comprend qu'il doit créer un tableau de valeurs simples. Pour chaque ligne du fichier de liaison, il résout la dépendance et ajoute l'ID résultant à une liste.
+
+**JSON généré** (avec des ID d'exemple) :
+```json
+{
+  "name": "Antenne-5G-Paris",
+  "technologyIds": [22, 15]
+}
+```

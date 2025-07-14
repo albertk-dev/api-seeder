@@ -1,0 +1,53 @@
+# Fichiers de cache et compilés de Python
+# Ces fichiers sont générés automatiquement par Python pour l'optimisation
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environnement Virtuel
+# Ce dossier est énorme, spécifique à votre machine (OS, version Python)
+# et peut être entièrement recréé à partir de pyproject.toml.
+# NE JAMAIS LE METTRE DANS GIT.
+/venv/
+/env/
+/.venv/
+
+# Fichiers d'environnement contenant des secrets
+# Bonne pratique pour éviter de commiter des clés d'API par accident
+.env
+.env.*
+*.local
+
+# Artefacts de distribution et de construction
+# Ces dossiers sont générés par PyInstaller. Ils ne sont pas du code source.
+/build/
+/dist/
+*.spec
+
+# Fichiers générés par l'exécution de l'application
+# Les rapports d'erreurs sont spécifiques à une exécution et n'ont pas leur place dans le code source.
+erreurs_*.xlsx
+
+# Artefacts de packaging Python
+*.egg-info/
+/site/
+.tox/
+.eggs/
+
+# Fichiers de configuration des IDE et éditeurs de texte
+# Ces fichiers sont spécifiques à vos préférences personnelles
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Fichiers générés par le système d'exploitation
+# Inutiles pour le projet
+.DS_Store
+Thumbs.db
+
+# Fichiers de log
+# Les logs sont des résultats d'exécution, pas du code source
+*.log
+logs/
