@@ -113,7 +113,8 @@ Chaque objet dans le tableau `integration_steps` est une tâche de synchronisati
   "response_id_field": "id",
   "id_lookup_config": {
     "lookup_endpoint": "/organizations",
-    "lookup_query_param": "filter.name"
+    "lookup_query_param": "filter.name",
+    "lookup_response_data_path":"data" //utilisé "." pour un tableau
   }
 }
 ```
@@ -375,9 +376,54 @@ Le script voit `"_placeholder"` et comprend qu'il doit créer un tableau de vale
   "technologyIds": [22, 15]
 }
 ```
+## VI. Options de Mapping Avancées
 
+Pour un contrôle plus fin, vous pouvez ajouter des options à un champ de mapping en utilisant une clé spéciale se terminant par `@options`.
+
+### Gérer les Valeurs Vides (`empty_value`)
+
+**Problème :** Par défaut, si une cellule dans votre fichier Excel est vide ou contient `N/A`, le champ correspondant ne sera pas inclus dans le JSON final. Parfois, l'API exige que le champ soit présent, même avec une valeur vide (ex: `""`).
+
+**Solution :** Utilisez l'option `empty_value` pour définir une valeur par défaut.
+
+*   **Objectif** : Pour la caractéristique "Unité de Mesure", si la cellule Excel est vide, envoyer une chaîne vide `""` au lieu d'omettre le champ.
+*   **Fichier `caracteristiques_modeles.xlsx`** :
+
+| nom_caracteristique | type_champ | unite_mesure |
+| :--- | :--- | :--- |
+| Hauteur du pylône | NUMBER | m |
+| Type de pylône | STRING | |  <-- Cellule vide
+
+*   **Configuration** :
+```json
+"payload_mapping": {
+  "name": "nom_caracteristique",
+  "type": "type_champ",
+  "fieldUnit": "unite_mesure",
+
+  "fieldUnit@options": {
+    "empty_value": ""
+  }
+}
+```
+
+*   **Logique** :
+    1.  Le script lit la ligne "Type de pylône", la colonne `unite_mesure` est vide.
+    2.  Normalement, le champ `fieldUnit` serait ignoré.
+    3.  Cependant, le script trouve la clé `fieldUnit@options` et l'option `empty_value`.
+    4.  Il assigne la valeur `""` au champ `fieldUnit`.
+
+*   **JSON généré pour la requête** :
+```json
+{
+  "name": "Type de pylône",
+  "type": "STRING",
+  "fieldUnit": ""  // <-- Le champ est présent avec une valeur par défaut
+}
+```
 
 ---
+
 
 ## Outil d'Aide : Générateur de Modèles Excel
 

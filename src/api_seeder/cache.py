@@ -3,6 +3,7 @@
 import json
 import os
 from typing import Dict, Any
+from .logger import log
 
 # Ce dictionnaire en mémoire contiendra tous les ID.
 # Il est initialisé vide et rempli par load_id_cache().
@@ -15,27 +16,27 @@ def load_id_cache() -> None:
     S'il n'existe pas ou est corrompu, initialise un cache vide.
     """
     if os.path.exists(CACHE_FILENAME):
-        print(f"INFO: Cache d'ID trouvé. Chargement de '{CACHE_FILENAME}'...")
+        log.info(f"INFO: Cache d'ID trouvé. Chargement de '{CACHE_FILENAME}'...")
         try:
             with open(CACHE_FILENAME, 'r', encoding='utf-8') as f:
                 global ID_STORE
                 ID_STORE = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            print(f"AVERTISSEMENT: Impossible de lire le fichier cache. Un nouveau sera créé. Erreur: {e}")
+            log.warning(f"AVERTISSEMENT: Impossible de lire le fichier cache. Un nouveau sera créé. Erreur: {e}")
             ID_STORE = {}
     else:
-        print("INFO: Aucun cache d'ID trouvé. Un nouveau sera créé.")
+        log.info("INFO: Aucun cache d'ID trouvé. Un nouveau sera créé.")
         ID_STORE = {}
 
 def save_id_cache() -> None:
     """Sauvegarde le contenu actuel de ID_STORE dans le fichier cache .id_cache.json."""
-    print(f"INFO: Sauvegarde du cache d'ID dans '{CACHE_FILENAME}'...")
+    log.info(f"INFO: Sauvegarde du cache d'ID dans '{CACHE_FILENAME}'...")
     try:
         with open(CACHE_FILENAME, 'w', encoding='utf-8') as f:
             # indent=2 pour que le fichier soit lisible par un humain
             json.dump(ID_STORE, f, indent=2)
     except IOError as e:
-        print(f"ERREUR: Impossible d'écrire dans le fichier cache '{CACHE_FILENAME}'. Erreur: {e}")
+        log.error(f"ERREUR: Impossible d'écrire dans le fichier cache '{CACHE_FILENAME}'. Erreur: {e}")
 
 def get_id(step_name: str, lookup_value: str) -> str | None:
     """Récupère un ID spécifique depuis le cache en mémoire."""
