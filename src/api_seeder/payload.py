@@ -13,23 +13,44 @@ from .utils import extract_entity_from_response # Import depuis utils.py
 # Cache de données pour éviter de lire plusieurs fois le même fichier Excel
 DATA_CACHE: Dict[str, pd.DataFrame] = {} 
 
+
 def _get_data(file_path: str) -> Optional[pd.DataFrame]:
     """
-    Fonction privée pour lire un fichier Excel et le mettre en cache.
-    Remplace les cellules vides par une chaîne vide dès la lecture.
+    Fonction intelligente pour lire un fichier de données.
+    Détecte automatiquement s'il s'agit d'un fichier Excel (.xlsx) ou CSV (.csv)
+    et le met en cache.
     """
     abs_path = os.path.abspath(file_path)
-    if abs_path not in DATA_CACHE:
-        try:
-            log.info(f"  > Lecture du fichier '{file_path}'...")
-            DATA_CACHE[abs_path] = pd.read_excel(file_path, dtype=str).fillna('')
-        except FileNotFoundError:
-            log.error(f"  [ERREUR] Fichier introuvable : {abs_path}")
+    if abs_path in DATA_CACHE:
+        return DATA_CACHE[abs_path]
+
+    try:
+        print(f"  > Lecture du fichier '{file_path}'...")
+        # Détection de l'extension du fichier
+        file_extension = os.path.splitext(file_path)[1].lower()
+
+        if file_extension == '.xlsx':
+            # Lire un fichier Excel
+            df = pd.read_excel(file_path, dtype=str).fillna('')
+        elif file_extension == '.csv':
+            # Lire un fichier CSV
+            # On suppose un séparateur virgule, mais on pourrait le rendre configurable
+            df = pd.read_csv(file_path, dtype=str, sep=',').fillna('')
+        else:
+            # Type de fichier non supporté
+            print(f"  [ERREUR] Type de fichier non supporté : '{file_extension}'. Utilisez .xlsx ou .csv.")
             return None
-        except Exception as e:
-            log.error(f"  [ERREUR] Impossible de lire le fichier Excel {file_path}: {e}")
-            return None
-    return DATA_CACHE[abs_path]
+        
+        # Mettre le DataFrame chargé en cache et le retourner
+        DATA_CACHE[abs_path] = df
+        return df
+
+    except FileNotFoundError:
+        print(f"  [ERREUR] Fichier introuvable : {abs_path}")
+        return None
+    except Exception as e:
+        print(f"  [ERREUR] Impossible de lire le fichier de données {file_path}: {e}")
+        return None
 
 def resolve_placeholder(
     value: str, 
