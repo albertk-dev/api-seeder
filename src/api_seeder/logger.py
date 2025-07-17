@@ -26,7 +26,7 @@ def setup_logger():
 
     # Créer un handler pour afficher les messages dans la console
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)  # Afficher les messages INFO et plus graves dans la console
+    console_handler.setLevel(logging.INFO)  # Afficher les messages INFO et plus graves dans la console
 
     # Définir le format des messages de log
     file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
