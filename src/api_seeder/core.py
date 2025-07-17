@@ -63,6 +63,9 @@ def run_integration_step(step_config: Dict[str, Any], api_client: ApiClient, glo
     step_name = step_config['name']
     log.info(f"--- Démarrage de l'étape : {step_name} ---")
 
+    csv_options = step_config.get("csv_options", {})
+    source_df = _get_data(step_config['source_file'], csv_options=csv_options)
+
     source_df = _get_data(step_config['source_file'])
     if source_df is None:
         log.error(f"ÉCHEC CRITIQUE: Le fichier source pour l'étape '{step_name}' est introuvable.")
@@ -102,7 +105,7 @@ def run_integration_step(step_config: Dict[str, Any], api_client: ApiClient, glo
         if not entity and mode == "sync":
             log.info("    Entité non trouvée, tentative de création...")
             try:
-                p = build_payload(row, step_config['payload_mapping'], api_client, global_config)
+                p = build_payload(row, step_config['payload_mapping'], api_client, global_config, csv_options)
                 if p is None:
                     raise ValueError("Le payload n'a pas pu être construit (dépendance manquante).")
                 

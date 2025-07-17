@@ -14,34 +14,34 @@ from .utils import extract_entity_from_response # Import depuis utils.py
 DATA_CACHE: Dict[str, pd.DataFrame] = {} 
 
 
-def _get_data(file_path: str) -> Optional[pd.DataFrame]:
+def _get_data(file_path: str, csv_options: dict = None) -> Optional[pd.DataFrame]:
     """
-    Fonction intelligente pour lire un fichier de données.
-    Détecte automatiquement s'il s'agit d'un fichier Excel (.xlsx) ou CSV (.csv)
-    et le met en cache.
+    Fonction intelligente pour lire un fichier de données, en utilisant
+    les options CSV fournies si nécessaire.
     """
     abs_path = os.path.abspath(file_path)
     if abs_path in DATA_CACHE:
         return DATA_CACHE[abs_path]
 
+    # S'assurer que csv_options est un dictionnaire
+    if csv_options is None:
+        csv_options = {}
+
     try:
         print(f"  > Lecture du fichier '{file_path}'...")
-        # Détection de l'extension du fichier
         file_extension = os.path.splitext(file_path)[1].lower()
 
         if file_extension == '.xlsx':
-            # Lire un fichier Excel
             df = pd.read_excel(file_path, dtype=str).fillna('')
         elif file_extension == '.csv':
-            # Lire un fichier CSV
-            # On suppose un séparateur virgule, mais on pourrait le rendre configurable
-            df = pd.read_csv(file_path, dtype=str, sep=',').fillna('')
+            # Utiliser le séparateur de la config, ou la virgule par défaut
+            separator = csv_options.get('separator', ',')
+            print(f"    Utilisation du séparateur CSV : '{separator}'")
+            df = pd.read_csv(file_path, dtype=str, sep=separator).fillna('')
         else:
-            # Type de fichier non supporté
-            print(f"  [ERREUR] Type de fichier non supporté : '{file_extension}'. Utilisez .xlsx ou .csv.")
+            print(f"  [ERREUR] Type de fichier non supporté : '{file_extension}'.")
             return None
         
-        # Mettre le DataFrame chargé en cache et le retourner
         DATA_CACHE[abs_path] = df
         return df
 
@@ -134,7 +134,8 @@ def build_payload(
     row: pd.Series, 
     mapping: Dict[str, Any], 
     api_client: ApiClient, 
-    global_config: Dict[str, Any]
+    global_config: Dict[str, Any],
+    csv_options: dict = None 
 ) -> Optional[Dict[str, Any]]:
     """
     Construit récursivement le dictionnaire (payload) à envoyer à l'API.
@@ -154,7 +155,7 @@ def build_payload(
             if isinstance(value_mapping, dict):
                 # Sous-cas A1: Tableau depuis un autre fichier
                 if "source_file" in value_mapping:
-                    child_df = _get_data(value_mapping['source_file'])
+                    child_df = _get_data(value_mapping['source_file'], csv_options=csv_options)
                     if child_df is None: continue
                     parent_link_val = row.get(value_mapping['link_column_parent'], '')
                     if not parent_link_val: continue
@@ -164,7 +165,7 @@ def build_payload(
                         placeholder_str = value_mapping["mapping"]["_placeholder"]
                         final_value = [resolve_placeholder(placeholder_str, child_row, api_client, global_config) for _, child_row in child_rows.iterrows()]
                     else: # Tableau d'objets
-                        final_value = [build_payload(child_row, value_mapping['mapping'], api_client, global_config) for _, child_row in child_rows.iterrows()]
+                        final_value = [build_payload(child_row, value_mapping['mapping'], api_client, global_config, csv_options) for _, child_row in child_rows.iterrows()]
                     
                     final_value = [v for v in final_value if v is not None] or None
 
@@ -175,7 +176,7 @@ def build_payload(
                 
                 # Sous-cas A3: Objet imbriqué
                 else:
-                    final_value = build_payload(row, value_mapping, api_client, global_config)
+                    final_value = build_payload(row, value_mapping, api_client, global_config, csv_options)
             
             #
             # Cas B: Le mapping est une chaîne de caractères (colonne, placeholder, statique)
