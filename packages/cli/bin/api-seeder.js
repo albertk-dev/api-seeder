@@ -332,15 +332,17 @@ async function runSchema(options) {
 import * as http from "http";
 import * as fs6 from "fs/promises";
 import * as path6 from "path";
+import { fileURLToPath } from "url";
 import open from "open";
 import * as p6 from "@clack/prompts";
 import pc6 from "picocolors";
-import { SeederEngine as SeederEngine2, FileParser as FileParser2, validateConfig } from "@api-seeder/core";
-async function runStudio(options) {
+import { SeederEngine as SeederEngine2, FileParser as FileParser2, TemplateGenerator as TemplateGenerator3, validateConfig, safeValidateConfig as safeValidateConfig3 } from "@api-seeder/core";
+async function runStudio(options = {}) {
   const port = options.port || 4e3;
   const configPath = path6.resolve(options.config || "./config.json");
   const workingDir = path6.dirname(configPath);
-  p6.intro(pc6.bgMagenta(pc6.black(" API Seeder Studio ")) + pc6.bold(" Interactive Web Experience"));
+  p6.intro(pc6.bgMagenta(pc6.black(" API Seeder Studio ")) + pc6.bold(" Local Web Ingestion Cockpit"));
+  const uiDir = await resolveUiDirectory();
   const server = http.createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -359,7 +361,7 @@ async function runStudio(options) {
           res.end(data);
         } catch {
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Config file not found", configPath }));
+          res.end(JSON.stringify({ error: `Config file not found at: ${configPath}` }));
         }
         return;
       }
@@ -399,7 +401,44 @@ async function runStudio(options) {
         });
         return;
       }
+      if (url.pathname === "/api/validate" && req.method === "POST") {
+        try {
+          const content = await fs6.readFile(configPath, "utf-8");
+          const rawConfig = JSON.parse(content);
+          const validation = safeValidateConfig3(rawConfig);
+          if (!validation.success) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ success: false, error: validation.error.errors[0]?.message }));
+            return;
+          }
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: true }));
+        } catch (err) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+        return;
+      }
+      if (url.pathname === "/api/templates" && req.method === "POST") {
+        try {
+          const content = await fs6.readFile(configPath, "utf-8");
+          const rawConfig = JSON.parse(content);
+          const validation = safeValidateConfig3(rawConfig);
+          if (!validation.success) {
+            throw new Error("Schema validation error");
+          }
+          const outputDir = path6.resolve(workingDir, "templates_excel");
+          const generated = await TemplateGenerator3.generateTemplates(validation.data, outputDir);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: true, count: generated.length, outputDir }));
+        } catch (err) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+        return;
+      }
       if (url.pathname === "/api/run-stream" && req.method === "GET") {
+        const dryRun = url.searchParams.get("dryRun") === "true";
         res.writeHead(200, {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
@@ -415,6 +454,7 @@ data: ${JSON.stringify(data)}
           const configContent = await fs6.readFile(configPath, "utf-8");
           const parsedConfig = JSON.parse(configContent);
           const engine = new SeederEngine2(parsedConfig, {
+            dryRun,
             workingDirectory: workingDir,
             onProgress: (prog) => {
               sendEvent("progress", prog);
@@ -432,8 +472,7 @@ data: ${JSON.stringify(data)}
         }
         return;
       }
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(getStudioHtml(port));
+      await serveStaticFile(url.pathname, uiDir, res);
     } catch (err) {
       res.writeHead(500, { "Content-Type": "text/plain" });
       res.end(`Internal Server Error: ${err.message}`);
@@ -448,226 +487,57 @@ data: ${JSON.stringify(data)}
     });
   });
 }
-function getStudioHtml(port) {
-  return `<!DOCTYPE html>
-<html lang="fr" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Seeder Studio</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
-    code, pre { font-family: 'JetBrains Mono', monospace; }
-    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
-  </style>
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-  <!-- Top Navigation -->
-  <header class="border-b border-slate-800/80 bg-slate-900/60 sticky top-0 z-50 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 text-lg">
-          \u26A1
-        </div>
-        <div>
-          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
-            API Seeder <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30">Studio</span>
-          </h1>
-          <p class="text-xs text-slate-400">Hierarchical Ingestion & Sync Engine</p>
-        </div>
-      </div>
-      <div class="flex items-center space-x-3">
-        <button id="btn-refresh" class="px-3.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-medium hover:bg-slate-700 transition">
-          \u{1F504} Recharger Config
-        </button>
-        <button id="btn-run" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-semibold shadow-lg shadow-emerald-500/25 hover:from-emerald-400 hover:to-teal-500 transition flex items-center gap-1.5">
-          \u25B6 Lancer Synchronisation
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-    <!-- Left Column: Steps & Configuration -->
-    <div class="lg:col-span-7 space-y-6">
-      <div class="glass rounded-2xl p-6 shadow-xl">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-bold text-white flex items-center gap-2">
-            <span>\u2699\uFE0F</span> Configuration Active
-          </h2>
-          <span id="api-base-url" class="text-xs px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 font-mono text-cyan-400">...</span>
-        </div>
-        <div id="steps-container" class="space-y-3">
-          <div class="animate-pulse bg-slate-800/50 rounded-xl p-4 h-24"></div>
-        </div>
-      </div>
-
-      <!-- Live Log Stream -->
-      <div class="glass rounded-2xl p-6 shadow-xl">
-        <h2 class="text-base font-bold text-white flex items-center justify-between mb-3">
-          <span class="flex items-center gap-2"><span>\u{1F4DC}</span> Journal d'Ex\xE9cution (Temps R\xE9el)</span>
-          <span id="run-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-medium">En attente</span>
-        </h2>
-        <div id="logs-terminal" class="bg-slate-900 border border-slate-800 rounded-xl p-4 h-64 overflow-y-auto font-mono text-xs space-y-1 text-slate-300">
-          <p class="text-slate-500">Pr\xEAt \xE0 lancer. Cliquez sur "Lancer Synchronisation" pour d\xE9marrer.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right Column: Live Metrics & Preview -->
-    <div class="lg:col-span-5 space-y-6">
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="glass rounded-2xl p-5 border-l-4 border-l-emerald-500">
-          <p class="text-xs text-slate-400 font-medium">Entit\xE9s Cr\xE9\xE9es</p>
-          <p id="metric-created" class="text-2xl font-black text-emerald-400 mt-1">0</p>
-        </div>
-        <div class="glass rounded-2xl p-5 border-l-4 border-l-rose-500">
-          <p class="text-xs text-slate-400 font-medium">Rejets / Erreurs</p>
-          <p id="metric-failed" class="text-2xl font-black text-rose-400 mt-1">0</p>
-        </div>
-      </div>
-
-      <!-- Data Source Preview -->
-      <div class="glass rounded-2xl p-6 shadow-xl">
-        <h2 class="text-base font-bold text-white mb-3 flex items-center gap-2">
-          <span>\u{1F4CA}</span> Pr\xE9visualisation Donn\xE9es
-        </h2>
-        <div id="preview-container" class="overflow-x-auto text-xs">
-          <p class="text-slate-400 text-xs py-8 text-center">S\xE9lectionnez une \xE9tape \xE0 gauche pour inspecter ses donn\xE9es.</p>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    async function loadConfig() {
-      try {
-        const res = await fetch('/api/config');
-        const data = await res.json();
-        if (data.error) {
-          document.getElementById('steps-container').innerHTML = \`<p class="text-rose-400 text-sm">\${data.error}</p>\`;
-          return;
-        }
-        document.getElementById('api-base-url').textContent = data.api_base_url || 'URL Non D\xE9finie';
-        
-        const container = document.getElementById('steps-container');
-        container.innerHTML = data.integration_steps.map((step, idx) => \`
-          <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 transition cursor-pointer" onclick="previewStep('\${step.source_file}')">
-            <div class="flex items-center justify-between">
-              <span class="font-semibold text-sm text-white flex items-center gap-2">
-                <span class="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold">\${idx + 1}</span>
-                \${step.name}
-              </span>
-              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 font-mono text-cyan-400">\${step.method || 'POST'} \${step.endpoint}</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-2 flex items-center gap-2">
-              <span>\u{1F4C1} \${step.source_file}</span>
-            </p>
-          </div>
-        \`).join('');
-      } catch (err) {
-        console.error(err);
-      }
+async function serveStaticFile(pathname, uiDir, res) {
+  const cleanPath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+  const filePath = path6.resolve(uiDir, cleanPath);
+  if (!filePath.startsWith(uiDir)) {
+    res.writeHead(403, { "Content-Type": "text/plain" });
+    res.end("Forbidden");
+    return;
+  }
+  try {
+    const content = await fs6.readFile(filePath);
+    const ext = path6.extname(filePath).toLowerCase();
+    const contentTypes = {
+      ".html": "text/html; charset=utf-8",
+      ".css": "text/css; charset=utf-8",
+      ".js": "application/javascript; charset=utf-8",
+      ".json": "application/json; charset=utf-8",
+      ".svg": "image/svg+xml",
+      ".png": "image/png",
+      ".ico": "image/x-icon"
+    };
+    res.writeHead(200, { "Content-Type": contentTypes[ext] || "application/octet-stream" });
+    res.end(content);
+  } catch {
+    try {
+      const fallback = await fs6.readFile(path6.join(uiDir, "index.html"));
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(fallback);
+    } catch {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("UI asset not found");
     }
-
-    async function previewStep(filePath) {
-      const container = document.getElementById('preview-container');
-      container.innerHTML = '<p class="text-slate-400 text-xs py-4 text-center">Chargement du fichier...</p>';
-      try {
-        const res = await fetch('/api/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath })
-        });
-        const data = await res.json();
-        if (data.error) {
-          container.innerHTML = \`<p class="text-rose-400 text-xs py-4 text-center">\${data.error}</p>\`;
-          return;
-        }
-
-        const tableHtml = \`
-          <div class="mb-2 text-xs text-slate-400 font-medium">Total: \${data.totalRows} ligne(s) source</div>
-          <table class="w-full border-collapse border border-slate-800 rounded-lg overflow-hidden">
-            <thead>
-              <tr class="bg-slate-900 text-slate-300">
-                \${data.headers.map(h => \`<th class="border border-slate-800 px-3 py-1.5 text-left font-semibold">\${h}</th>\`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              \${data.sample.map((row, rIdx) => \`
-                <tr class="\${rIdx % 2 === 0 ? 'bg-slate-950/40' : 'bg-slate-900/40'} hover:bg-slate-800/60">
-                  \${data.headers.map(h => \`<td class="border border-slate-800 px-3 py-1.5 text-slate-300">\${row[h] || ''}</td>\`).join('')}
-                </tr>
-              \`).join('')}
-            </tbody>
-          </table>
-        \`;
-        container.innerHTML = tableHtml;
-      } catch (err) {
-        container.innerHTML = \`<p class="text-rose-400 text-xs py-4 text-center">\${err.message}</p>\`;
-      }
+  }
+}
+async function resolveUiDirectory() {
+  const possiblePaths = [
+    // Next to current file (when running from source / ts-node)
+    path6.resolve(path6.dirname(fileURLToPath(import.meta.url)), "../../ui"),
+    // Next to bin in built package
+    path6.resolve(path6.dirname(fileURLToPath(import.meta.url)), "../ui"),
+    // Workspace root / cwd
+    path6.resolve(process.cwd(), "packages/cli/ui"),
+    path6.resolve(process.cwd(), "ui")
+  ];
+  for (const candidate of possiblePaths) {
+    try {
+      await fs6.access(path6.join(candidate, "index.html"));
+      return candidate;
+    } catch {
     }
-
-    document.getElementById('btn-refresh').addEventListener('click', loadConfig);
-
-    document.getElementById('btn-run').addEventListener('click', () => {
-      const terminal = document.getElementById('logs-terminal');
-      terminal.innerHTML = '<p class="text-cyan-400 font-semibold">\u26A1 D\xE9marrage de la synchronisation...</p>';
-      document.getElementById('run-status-badge').textContent = 'En cours...';
-      document.getElementById('run-status-badge').className = 'text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-medium animate-pulse';
-
-      let created = 0;
-      let failed = 0;
-
-      const eventSource = new EventSource('/api/run-stream');
-
-      eventSource.addEventListener('progress', (e) => {
-        const prog = JSON.parse(e.data);
-        const p = document.createElement('p');
-        if (prog.status === 'success') {
-          created++;
-          p.className = 'text-emerald-400';
-          p.textContent = \`[\u2714] \${prog.stepName} (Ligne \${prog.currentRow}/\${prog.totalRows}) ID: \${prog.entityId || ''}\`;
-        } else if (prog.status === 'failed') {
-          failed++;
-          p.className = 'text-rose-400';
-          p.textContent = \`[\u2716] \${prog.stepName} (Ligne \${prog.currentRow}/\${prog.totalRows}) \${prog.message || ''}\`;
-        } else {
-          p.className = 'text-slate-400';
-          p.textContent = \`[\u2192] \${prog.stepName} (Ligne \${prog.currentRow}/\${prog.totalRows}) ...\`;
-        }
-        terminal.appendChild(p);
-        terminal.scrollTop = terminal.scrollHeight;
-        document.getElementById('metric-created').textContent = created;
-        document.getElementById('metric-failed').textContent = failed;
-      });
-
-      eventSource.addEventListener('completed', (e) => {
-        const res = JSON.parse(e.data);
-        const p = document.createElement('p');
-        p.className = res.success ? 'text-emerald-400 font-bold mt-2' : 'text-rose-400 font-bold mt-2';
-        p.textContent = res.success ? '\u2714 Synchronisation termin\xE9e avec succ\xE8s !' : '\u2716 Synchronisation termin\xE9e avec des erreurs.';
-        terminal.appendChild(p);
-        eventSource.close();
-        document.getElementById('run-status-badge').textContent = 'Termin\xE9';
-        document.getElementById('run-status-badge').className = res.success ? 'text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium' : 'text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-medium';
-      });
-
-      eventSource.addEventListener('error', () => {
-        eventSource.close();
-      });
-    });
-
-    loadConfig();
-  </script>
-</body>
-</html>`;
+  }
+  throw new Error("Could not locate API Seeder Studio UI directory containing index.html");
 }
 
 // bin/api-seeder.ts

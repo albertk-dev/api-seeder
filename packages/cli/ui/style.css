@@ -1,0 +1,66 @@
+/* packages/cli/ui/style.css */
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #090d16;
+    color: #dfe2ef;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Typography styles */
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Glassmorphism & Surface Elevation */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+.glass-card {
+  background: #151f36;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  transition: all 0.2s ease;
+}
+
+.glass-card:hover {
+  background: #1c2744;
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Pulse & Status Glows */
+.glow-emerald {
+  box-shadow: 0 0 16px -2px rgba(16, 185, 129, 0.4);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 12px -2px rgba(6, 182, 212, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
