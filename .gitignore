@@ -29,3 +29,7 @@ Thumbs.db
 # Coverage
 coverage/
 *.lcov
+
+# Temporary design generation workspace
+.stitch-temp/
+
