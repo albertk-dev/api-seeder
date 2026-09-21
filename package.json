@@ -1,0 +1,24 @@
+{
+  "name": "api-seeder-monorepo",
+  "private": true,
+  "description": "Industrial hierarchical Excel/CSV data ingestion engine & seed orchestrator for REST APIs",
+  "author": "Albert Kameni <albertk.explorer@gmail.com> (https://github.com/albertk-dev)",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "dev": "pnpm --filter @api-seeder/studio dev",
+    "lint": "pnpm -r run lint",
+    "clean": "pnpm -r exec rimraf dist node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "rimraf": "^6.0.1"
+  },
+  "packageManager": "pnpm@11.0.9",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

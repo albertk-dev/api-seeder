@@ -1,0 +1,189 @@
+{
+  "$ref": "#/definitions/ApiSeederConfig",
+  "definitions": {
+    "ApiSeederConfig": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "api_base_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "use_id_cache": {
+          "type": "boolean",
+          "default": true
+        },
+        "id_cache_file": {
+          "type": "string",
+          "default": ".id_cache.json"
+        },
+        "global_headers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {
+            "Content-Type": "application/json"
+          }
+        },
+        "lookups": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "endpoint": {
+                "type": "string",
+                "minLength": 1
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Mapping of API query param to Excel column name"
+              },
+              "response_id_field": {
+                "type": "string",
+                "default": "id"
+              },
+              "response_data_path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "endpoint",
+              "params"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "integration_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "source_file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "endpoint": {
+                "type": "string",
+                "minLength": 1
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE"
+                ],
+                "default": "POST"
+              },
+              "unique_identifier": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "sync",
+                  "create_only",
+                  "update_only"
+                ],
+                "default": "sync"
+              },
+              "csv_options": {
+                "type": "object",
+                "properties": {
+                  "separator": {
+                    "type": "string",
+                    "default": ","
+                  },
+                  "delimiter": {
+                    "type": "string"
+                  },
+                  "encoding": {
+                    "type": "string",
+                    "default": "utf-8"
+                  },
+                  "header": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "additionalProperties": true
+              },
+              "id_lookup_config": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "lookup_endpoint": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "lookup_query_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "response_id_field": {
+                    "type": "string",
+                    "default": "id"
+                  },
+                  "response_data_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "lookup_endpoint",
+                  "lookup_query_params"
+                ],
+                "additionalProperties": false
+              },
+              "payload_mapping": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "JSON payload mapping structure"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "source_file",
+              "endpoint",
+              "payload_mapping"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "api_base_url",
+        "integration_steps"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

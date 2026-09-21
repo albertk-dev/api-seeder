@@ -1,0 +1,40 @@
+{
+  "name": "api-seeder",
+  "version": "1.0.0",
+  "description": "Industrial hierarchical Excel/CSV data ingestion engine & seed orchestrator for REST APIs",
+  "author": "Albert Kameni <albertk.explorer@gmail.com> (https://github.com/albertk-dev)",
+  "license": "MIT",
+  "bin": {
+    "api-seeder": "./bin/api-seeder.mjs"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin/api-seeder.mjs"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean && tsup bin/api-seeder.ts --format esm --out-dir bin --no-dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
+  },
+  "dependencies": {
+    "@api-seeder/core": "workspace:*",
+    "@clack/prompts": "^0.10.1",
+    "commander": "^13.1.0",
+    "open": "^10.1.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  }
+}
