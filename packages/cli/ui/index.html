@@ -10,52 +10,50 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+<body class="bg-[#090D16] text-[#DFE2EF] min-h-screen flex flex-col antialiased">
 
-  <!-- Header / Navigation Bar -->
-  <header class="fixed top-0 left-0 right-0 z-50 h-14 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md">
-    <div class="max-w-[1700px] mx-auto h-full px-4 flex items-center justify-between gap-4">
+  <!-- Top Navigation Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 h-14 bg-[#0F172A]/90 border-b border-[#1E293B] backdrop-blur-md">
+    <div class="max-w-[1750px] mx-auto h-full px-4 flex items-center justify-between gap-4">
       
       <!-- Brand & Version -->
       <div class="flex items-center gap-3 min-w-max">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-white text-base shadow-md shadow-cyan-500/20">
-          ⚡
-        </div>
+        <img src="./logo.svg" alt="API Seeder Logo" class="w-8 h-8 rounded-lg shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="font-bold text-sm tracking-tight text-white">API Seeder Studio</span>
-          <span class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[11px] text-cyan-400">v1.0.0</span>
+          <span class="font-bold text-sm tracking-tight text-white font-['Plus_Jakarta_Sans']">API Seeder Studio</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700 font-mono text-[10px] text-cyan-400">v1.0.0 (TS Engine)</span>
         </div>
       </div>
 
       <!-- Center Status Pill: API Base URL -->
-      <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950 border border-slate-800">
+      <div class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-[#090D16] border border-[#1E293B]">
         <span class="w-2 h-2 rounded-full bg-emerald-400 glow-emerald"></span>
-        <span class="font-mono text-xs text-slate-400">Target API:</span>
+        <span class="font-mono text-xs text-slate-400">Connected:</span>
         <span id="api-base-url" class="font-mono text-xs text-cyan-400 font-semibold truncate max-w-xs lg:max-w-md">Loading...</span>
       </div>
 
       <!-- Action Toolbar -->
-      <div class="flex items-center gap-2.5">
-        <button id="btn-validate" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition">
+      <div class="flex items-center gap-2">
+        <button id="btn-validate" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition">
           <span>✔</span>
           <span>Validate Config</span>
         </button>
 
-        <button id="btn-templates" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition">
+        <button id="btn-templates" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-medium text-xs border border-slate-700 transition">
           <span>📊</span>
           <span>Excel Templates</span>
         </button>
 
-        <!-- Dry-Run Toggle Switch -->
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
-          <span class="text-[11px] font-mono text-amber-400 font-bold uppercase">Dry-Run</span>
-          <div id="dry-run-toggle" class="w-8 h-4 bg-slate-800 rounded-full relative p-0.5 cursor-pointer border border-slate-700 flex items-center">
+        <!-- Dry-Run Toggle -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0F172A] border border-[#1E293B]">
+          <span class="text-[10px] font-mono text-amber-400 font-bold uppercase">Dry-Run</span>
+          <div id="dry-run-toggle" class="w-7 h-4 bg-slate-800 rounded-full relative p-0.5 cursor-pointer border border-slate-700 flex items-center">
             <div id="dry-run-dot" class="w-3 h-3 rounded-full bg-slate-500 transition-all"></div>
           </div>
         </div>
 
         <!-- Primary CTA: Run Sync -->
-        <button id="btn-run-sync" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all">
+        <button id="btn-run-sync" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 text-slate-950 font-bold text-xs shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all">
           <span>▶</span>
           <span>Run Sync</span>
         </button>
@@ -64,117 +62,154 @@
     </div>
   </header>
 
+  <!-- Sub-Header Context Bar -->
+  <div class="pt-14 w-full bg-[#0A0E17] border-b border-[#1E293B]/60 px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs">
+    <div class="flex items-center gap-2 text-slate-400 font-mono text-[11px]">
+      <span>Projects</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-slate-300">API Seeder</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-cyan-400 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">Active Workspace</span>
+      <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
+        <span>🔒</span><span>Idempotent DAG</span>
+      </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span id="sync-status-timestamp" class="text-slate-500 font-mono text-[11px]">State: Ready</span>
+      <button id="btn-refresh" class="text-slate-400 hover:text-white flex items-center gap-1 transition">
+        <span>🔄</span><span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Main Cockpit Workspace -->
-  <main class="flex-1 pt-16 pb-6 px-4 max-w-[1700px] mx-auto w-full flex flex-col gap-4">
+  <main class="flex-1 px-4 py-4 max-w-[1750px] mx-auto w-full flex flex-col gap-4">
 
-    <!-- Top Workspace Grid (3-Column Layout) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+    <!-- Top Grid: 3-Column Studio Cockpit -->
+    <div class="grid grid-cols-1 xl:grid-cols-[300px_1fr_320px] gap-4 flex-1">
 
-      <!-- LEFT COLUMN: Ingestion Pipeline DAG (Col 1-3) -->
-      <aside class="lg:col-span-3 flex flex-col gap-3 glass-panel rounded-xl p-4 shadow-xl">
-        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+      <!-- LEFT COLUMN: Pipeline DAG Navigator -->
+      <aside class="flex flex-col gap-3 glass-panel rounded-xl p-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-[#1E293B] pb-2">
           <div class="flex items-center gap-2">
-            <span class="text-cyan-400 text-sm">🌿</span>
-            <h2 class="font-bold text-xs uppercase tracking-wider text-slate-200">Pipeline Steps</h2>
+            <span class="text-cyan-400 font-bold">☊</span>
+            <h2 class="font-bold text-xs uppercase tracking-wider text-slate-200">Ingestion Pipeline</h2>
           </div>
           <span id="step-count-badge" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">
-            0 Steps
+            0 Steps Ready
           </span>
         </div>
 
         <div id="steps-list" class="flex flex-col gap-2 overflow-y-auto max-h-[460px] pr-1">
-          <div class="p-4 text-center text-slate-500 text-xs">Loading steps from config...</div>
+          <div class="p-4 text-center text-slate-500 text-xs font-mono">Loading pipeline steps...</div>
+        </div>
+
+        <!-- Engine Status Footprint -->
+        <div class="mt-auto pt-2 border-t border-[#1E293B] flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span>Engine Status</span>
+          <span class="text-emerald-400 font-bold">ACTIVE</span>
         </div>
       </aside>
 
-      <!-- CENTER COLUMN: Data Preview Table (Col 4-9) -->
-      <section class="lg:col-span-6 flex flex-col gap-3 glass-panel rounded-xl p-4 shadow-xl min-w-0">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+      <!-- CENTER COLUMN: Spreadsheet Preview Workspace -->
+      <section class="flex flex-col gap-3 glass-panel rounded-xl p-4 shadow-xl min-w-0">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E293B] pb-2">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-blue-400 text-sm">📋</span>
-            <h2 id="preview-title" class="font-bold text-xs font-mono text-slate-200 truncate">
-              Spreadsheet Preview
+            <span class="px-2 py-0.5 rounded bg-[#151F36] text-cyan-400 font-mono text-xs font-bold">DATA PREVIEW</span>
+            <h2 id="preview-title" class="font-mono text-xs text-slate-200 truncate">
+              Spreadsheet View
             </h2>
           </div>
-          <span id="preview-row-count" class="font-mono text-[11px] text-slate-400">Showing 0 rows</span>
+          <span id="preview-row-count" class="font-mono text-[11px] text-slate-400">0 rows detected</span>
+        </div>
+
+        <!-- Table Controls & Search Filter -->
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <input id="table-search" type="text" placeholder="Filter rows in active sheet..." 
+            class="px-3 py-1.5 rounded bg-[#090D16] border border-[#1E293B] text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500 flex-1 max-w-sm">
+          <div class="flex items-center gap-1.5 text-[11px] font-mono text-slate-400">
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-cyan-400">All Columns</span>
+            <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-emerald-400">Auto-Resolved</span>
+          </div>
         </div>
 
         <!-- High-Density Data Table -->
-        <div class="flex-1 overflow-x-auto rounded-lg border border-slate-800/80 bg-slate-950/60 max-h-[460px]">
+        <div class="flex-1 overflow-x-auto rounded-lg border border-[#1E293B] bg-[#090D16] max-h-[420px]">
           <table class="w-full text-left border-collapse">
-            <thead id="preview-table-head" class="sticky top-0 bg-slate-900 z-10">
-              <tr><th class="p-3 text-slate-500 text-xs">No file loaded</th></tr>
+            <thead id="preview-table-head" class="sticky top-0 bg-[#0F172A] z-10">
+              <tr><th class="p-3 text-slate-500 text-xs font-mono">No sheet selected</th></tr>
             </thead>
-            <tbody id="preview-table-body" class="divide-y divide-slate-900">
-              <tr><td class="p-4 text-center text-slate-500 text-xs">Select a step on the left to preview</td></tr>
+            <tbody id="preview-table-body" class="divide-y divide-[#151F36]">
+              <tr><td class="p-4 text-center text-slate-500 text-xs font-mono">Select a step on the left to preview its data</td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- RIGHT COLUMN: Telemetry & Audit KPIs (Col 10-12) -->
-      <aside class="lg:col-span-3 flex flex-col gap-4 glass-panel rounded-xl p-4 shadow-xl">
-        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+      <!-- RIGHT COLUMN: Telemetry & Audit Cockpit -->
+      <aside class="flex flex-col gap-3 glass-panel rounded-xl p-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-[#1E293B] pb-2">
           <div class="flex items-center gap-2">
-            <span class="text-cyan-400 text-sm">📊</span>
-            <h2 class="font-bold text-xs uppercase tracking-wider text-slate-200">Execution Telemetry</h2>
+            <span class="text-cyan-400">⚡</span>
+            <h2 class="font-bold text-xs uppercase tracking-wider text-slate-200">Telemetry & Audit</h2>
           </div>
         </div>
 
-        <!-- KPI Metrics Grid -->
+        <!-- KPI Summary Cards Grid -->
         <div class="grid grid-cols-3 gap-2">
-          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-center">
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Created</span>
+          <div class="p-3 rounded-lg bg-[#151F36] border border-[#1E293B] text-center">
+            <span class="text-[10px] font-mono text-slate-400 uppercase block">Created</span>
             <span id="metric-created" class="text-xl font-black text-emerald-400 mt-1 block">0</span>
           </div>
 
-          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-center">
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Errors</span>
+          <div class="p-3 rounded-lg bg-[#151F36] border border-[#1E293B] text-center">
+            <span class="text-[10px] font-mono text-slate-400 uppercase block">Errors</span>
             <span id="metric-errors" class="text-xl font-black text-rose-400 mt-1 block">0</span>
           </div>
 
-          <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 text-center">
-            <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Duration</span>
-            <span id="metric-duration" class="text-sm font-bold font-mono text-cyan-400 mt-1 block">0.00s</span>
+          <div class="p-3 rounded-lg bg-[#151F36] border border-[#1E293B] text-center">
+            <span class="text-[10px] font-mono text-slate-400 uppercase block">Duration</span>
+            <span id="metric-duration" class="text-sm font-bold font-mono text-cyan-400 mt-1.5 block">0.00s</span>
           </div>
         </div>
 
-        <!-- Audit Report Status -->
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 flex flex-col gap-2">
+        <!-- Audit File Card -->
+        <div class="p-3 rounded-lg bg-[#151F36] border border-[#1E293B] flex flex-col gap-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold text-slate-300">Audit Status</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 font-mono text-slate-400">xlsx</span>
+            <span class="text-xs font-bold text-slate-300">Audit Reporter</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 font-mono text-slate-400">ExcelJS</span>
           </div>
-          <p id="audit-status-text" class="text-xs text-slate-400">Awaiting execution...</p>
+          <p id="audit-status-text" class="text-xs text-slate-400 font-mono">Awaiting execution...</p>
         </div>
 
         <!-- Quick Help & Documentation -->
-        <div class="mt-auto p-3 rounded-lg bg-slate-900/40 border border-slate-800/60 text-[11px] text-slate-400 space-y-1.5">
-          <div class="font-semibold text-slate-300">Quick Tips</div>
-          <p>• Click any pipeline step to inspect its Excel sheet columns.</p>
-          <p>• Toggle <strong>Dry-Run</strong> to simulate without sending HTTP mutations.</p>
+        <div class="mt-auto p-3 rounded-lg bg-[#0F172A]/80 border border-[#1E293B] text-[11px] text-slate-400 space-y-1.5">
+          <div class="font-semibold text-slate-200">Execution Discipline</div>
+          <p>• Steps execute sequentially honoring parent-to-child ID dependencies.</p>
+          <p>• In <strong>Dry-Run</strong> mode, simulated IDs are propagated without mutating endpoints.</p>
         </div>
       </aside>
 
     </div>
 
-    <!-- BOTTOM ROW: Live SSE Console Drawer -->
-    <section class="glass-panel rounded-xl p-4 shadow-xl flex flex-col gap-2.5">
+    <!-- BOTTOM DOCK: Live SSE Telemetry Console -->
+    <section class="glass-panel rounded-xl p-4 shadow-xl flex flex-col gap-2">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="text-emerald-400 text-sm">⚡</span>
+          <span class="text-emerald-400 text-sm">●</span>
           <h2 class="font-bold text-xs uppercase tracking-wider text-slate-200">
-            Live Stream (Server-Sent Events)
+            Execution Stream (Server-Sent Events)
           </h2>
         </div>
-        <div class="w-48 bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800">
-          <div id="terminal-progress" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-300"></div>
+        <div class="w-48 bg-[#090D16] h-1.5 rounded-full overflow-hidden border border-[#1E293B]">
+          <div id="terminal-progress" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-200"></div>
         </div>
       </div>
 
       <!-- Logs Window -->
-      <div id="logs-terminal" class="h-36 overflow-y-auto rounded-lg bg-slate-950/90 border border-slate-800/80 p-3 font-mono text-xs space-y-1">
-        <div class="text-slate-500">API Seeder Studio ready. Click "Run Sync" to stream live execution logs.</div>
+      <div id="logs-terminal" class="h-32 overflow-y-auto rounded-lg bg-[#05070B] border border-[#1E293B] p-3 font-mono text-xs space-y-1">
+        <div class="text-slate-500">API Seeder Studio ready. Click "Run Sync" to stream live execution telemetry.</div>
       </div>
     </section>
 

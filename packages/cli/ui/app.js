@@ -56,6 +56,26 @@ function bindEvents() {
   elements.btnValidate.addEventListener('click', handleValidate);
   elements.btnTemplates.addEventListener('click', handleGenerateTemplates);
 
+  const btnRefresh = document.getElementById('btn-refresh');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', async () => {
+      addLog('[INFO] Reloading pipeline configuration...', 'info');
+      await loadConfig();
+    });
+  }
+
+  const tableSearch = document.getElementById('table-search');
+  if (tableSearch) {
+    tableSearch.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const rows = elements.previewTableBody.querySelectorAll('tr');
+      rows.forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    });
+  }
+
   elements.dryRunToggle.addEventListener('click', () => {
     state.dryRun = !state.dryRun;
     elements.dryRunDot.style.marginLeft = state.dryRun ? 'auto' : '0';
