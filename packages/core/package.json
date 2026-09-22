@@ -2,8 +2,31 @@
   "name": "@api-seeder/core",
   "version": "1.0.0",
   "description": "Core data ingestion engine, dependency resolver, and seed orchestrator for API Seeder",
-  "author": "Albert Kameni <albertk.explorer@gmail.com>",
+  "author": "Albert Kameni <albertk.explorer@gmail.com> (https://github.com/albertk-dev)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertk-dev/api-seeder.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/albertk-dev/api-seeder#readme",
+  "bugs": {
+    "url": "https://github.com/albertk-dev/api-seeder/issues"
+  },
+  "keywords": [
+    "seeder",
+    "api-seeder",
+    "core",
+    "excel",
+    "csv",
+    "rest-api",
+    "ingestion",
+    "dag",
+    "data-seeding"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

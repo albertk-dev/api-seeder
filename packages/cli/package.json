@@ -4,6 +4,30 @@
   "description": "Industrial hierarchical Excel/CSV data ingestion engine & seed orchestrator for REST APIs",
   "author": "Albert Kameni <albertk.explorer@gmail.com> (https://github.com/albertk-dev)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertk-dev/api-seeder.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/albertk-dev/api-seeder#readme",
+  "bugs": {
+    "url": "https://github.com/albertk-dev/api-seeder/issues"
+  },
+  "keywords": [
+    "api-seeder",
+    "cli",
+    "excel",
+    "csv",
+    "seeder",
+    "rest-api",
+    "etl",
+    "studio",
+    "database-seeder",
+    "developer-tools"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "api-seeder": "./bin/api-seeder.js"
@@ -19,6 +43,7 @@
   "files": [
     "dist",
     "bin/api-seeder.js",
+    "bin/api-seeder.mjs",
     "ui"
   ],
   "scripts": {

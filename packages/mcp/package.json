@@ -2,8 +2,30 @@
   "name": "@api-seeder/mcp",
   "version": "1.0.0",
   "description": "Model Context Protocol (MCP) server for API Seeder - AI Agent Data Ingestion & Schema Mapping",
-  "author": "Albert Kameni <albertk.explorer@gmail.com>",
+  "author": "Albert Kameni <albertk.explorer@gmail.com> (https://github.com/albertk-dev)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/albertk-dev/api-seeder.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/albertk-dev/api-seeder#readme",
+  "bugs": {
+    "url": "https://github.com/albertk-dev/api-seeder/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "api-seeder",
+    "ai",
+    "claude",
+    "cursor",
+    "antigravity",
+    "agent"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
