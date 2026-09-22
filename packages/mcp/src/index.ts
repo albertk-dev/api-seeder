@@ -201,8 +201,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       const generated = await TemplateGenerator.generateTemplates(
         validation.data,
-        outputDir,
-        path.dirname(configPath)
+        { outputDir: path.resolve(path.dirname(configPath), outputDir) }
       );
 
       return {

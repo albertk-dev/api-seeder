@@ -35,10 +35,16 @@ export class ApiClient {
 
   /**
    * Builds the complete URL by combining baseUrl and endpoint.
+   * If endpoint is an absolute URL (starts with http:// or https://), baseUrl is not prepended.
    */
   public buildUrl(endpoint: string, params?: Record<string, any>): string {
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = new URL(`${this.baseUrl}${cleanEndpoint}`);
+    let url: URL;
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+      url = new URL(endpoint);
+    } else {
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      url = new URL(`${this.baseUrl}${cleanEndpoint}`);
+    }
 
     if (params) {
       for (const [key, value] of Object.entries(params)) {
@@ -52,7 +58,7 @@ export class ApiClient {
   }
 
   /**
-   * Executes a fetch request with timeout and retries.
+   * Executes a fetch request with timeout, retries, status check, and FormData support.
    */
   public async request<T = any>(
     method: HttpMethod,
@@ -62,13 +68,22 @@ export class ApiClient {
       body?: any;
       headers?: Record<string, string>;
       retries?: number;
+      expectedStatus?: number | number[];
     }
   ): Promise<HttpResponse<T>> {
     const url = this.buildUrl(endpoint, options?.params);
-    const headers = {
+
+    const isFormData = typeof FormData !== 'undefined' && options?.body instanceof FormData;
+    const headers: Record<string, string> = {
       ...this.globalHeaders,
       ...options?.headers,
     };
+
+    // For multipart/form-data, let fetch set the boundary automatically
+    if (isFormData) {
+      delete headers['Content-Type'];
+      delete headers['content-type'];
+    }
 
     const maxAttempts = (options?.retries ?? this.maxRetries) + 1;
     let lastError: Error | null = null;
@@ -84,8 +99,14 @@ export class ApiClient {
           signal: controller.signal,
         };
 
-        if (options?.body && ['POST', 'PUT', 'PATCH'].includes(method)) {
-          fetchOptions.body = JSON.stringify(options.body);
+        if (options?.body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+          if (isFormData) {
+            fetchOptions.body = options.body;
+          } else if (typeof options.body === 'string') {
+            fetchOptions.body = options.body;
+          } else {
+            fetchOptions.body = JSON.stringify(options.body);
+          }
         }
 
         const response = await fetch(url, fetchOptions);
@@ -108,9 +129,17 @@ export class ApiClient {
           responseData = await response.text();
         }
 
+        let isOk = response.ok;
+        if (options?.expectedStatus !== undefined) {
+          const expected = Array.isArray(options.expectedStatus)
+            ? options.expectedStatus
+            : [options.expectedStatus];
+          isOk = expected.includes(response.status);
+        }
+
         return {
           status: response.status,
-          ok: response.ok,
+          ok: isOk,
           data: responseData,
           headers: responseHeaders,
         };
@@ -136,9 +165,10 @@ export class ApiClient {
   public async getEntity(
     endpoint: string,
     params?: Record<string, any>,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
+    expectedStatus?: number | number[]
   ): Promise<HttpResponse> {
-    return this.request('GET', endpoint, { params, headers });
+    return this.request('GET', endpoint, { params, headers, expectedStatus });
   }
 
   /**
@@ -147,9 +177,10 @@ export class ApiClient {
   public async createEntity(
     endpoint: string,
     body: any,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
+    expectedStatus?: number | number[]
   ): Promise<HttpResponse> {
-    return this.request('POST', endpoint, { body, headers });
+    return this.request('POST', endpoint, { body, headers, expectedStatus });
   }
 
   /**
@@ -159,9 +190,29 @@ export class ApiClient {
     endpoint: string,
     body: any,
     method: 'PUT' | 'PATCH' = 'PUT',
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
+    expectedStatus?: number | number[]
   ): Promise<HttpResponse> {
-    return this.request(method, endpoint, { body, headers });
+    return this.request(method, endpoint, { body, headers, expectedStatus });
+  }
+
+  /**
+   * Helper to delete or soft-delete an entity.
+   */
+  public async deleteEntity(
+    endpoint: string,
+    options?: {
+      method?: 'DELETE' | 'PUT' | 'PATCH' | 'POST';
+      body?: any;
+      headers?: Record<string, string>;
+      expectedStatus?: number | number[];
+    }
+  ): Promise<HttpResponse> {
+    return this.request(options?.method || 'DELETE', endpoint, {
+      body: options?.body,
+      headers: options?.headers,
+      expectedStatus: options?.expectedStatus,
+    });
   }
 
   /**
@@ -196,10 +247,28 @@ export class ApiClient {
   }
 
   /**
-   * Extracts the identifier (ID) from an entity or response object.
+   * Extracts the identifier (ID or URL) from an entity or response object.
+   * Supports dot notation (e.g. 'data.url' or 'upload.file_id').
    */
   public extractId(entity: any, idField: string = 'id'): string | undefined {
     if (!entity || typeof entity !== 'object') return undefined;
+
+    // Support dot-notation (e.g., 'data.url' or 'media.url')
+    if (idField.includes('.')) {
+      const parts = idField.split('.');
+      let current: any = entity;
+      for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+          current = current[part];
+        } else {
+          current = undefined;
+          break;
+        }
+      }
+      if (current !== undefined && current !== null) {
+        return String(current);
+      }
+    }
 
     // Try primary id field
     if (idField in entity && entity[idField] !== undefined && entity[idField] !== null) {
@@ -207,7 +276,7 @@ export class ApiClient {
     }
 
     // Try common fallback conventions
-    const fallbacks = ['id', '_id', 'uuid', 'code', 'id_key', 'identifier'];
+    const fallbacks = ['id', '_id', 'uuid', 'code', 'id_key', 'identifier', 'url', 'public_url'];
     for (const key of fallbacks) {
       if (key in entity && entity[key] !== undefined && entity[key] !== null) {
         return String(entity[key]);

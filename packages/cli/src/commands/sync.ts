@@ -76,22 +76,22 @@ export async function runSync(configPath: string, options: SyncCommandOptions): 
     if (result.success) {
       p.note(
         [
-          `${pc.green('✔')} Steps completed: ${pc.bold(`${result.completedSteps}/${result.totalSteps}`)}`,
-          `${pc.green('✔')} Records created:   ${pc.bold(String(result.totalCreated))}`,
-          `${pc.cyan('ℹ')} Records updated:   ${pc.bold(String(result.totalUpdated))}`,
-          `${pc.yellow('⏱')} Execution time:    ${pc.bold(`${durationSec}s`)}`,
+          `Steps completed: ${pc.bold(`${result.completedSteps}/${result.totalSteps}`)}`,
+          `Records created: ${pc.bold(String(result.totalCreated))}`,
+          `Records updated: ${pc.bold(String(result.totalUpdated))}`,
+          `Execution time:  ${pc.bold(`${durationSec}s`)}`,
         ].join('\n'),
         pc.green(pc.bold('SYNC SUCCESSFUL'))
       );
     } else {
       p.note(
         [
-          `${pc.yellow('⚠')} Steps processed: ${pc.bold(`${result.completedSteps}/${result.totalSteps}`)}`,
-          `${pc.green('✔')} Records created:   ${pc.bold(String(result.totalCreated))}`,
-          `${pc.cyan('ℹ')} Records updated:   ${pc.bold(String(result.totalUpdated))}`,
-          `${pc.red('✖')} Records failed:    ${pc.bold(String(result.totalFailed))}`,
+          `Steps processed: ${pc.bold(`${result.completedSteps}/${result.totalSteps}`)}`,
+          `Records created: ${pc.bold(String(result.totalCreated))}`,
+          `Records updated: ${pc.bold(String(result.totalUpdated))}`,
+          `Records failed:  ${pc.red(pc.bold(String(result.totalFailed)))}`,
           result.errorsReportPath
-            ? `\n${pc.magenta('📊 Audit Report Generated:')}\n${pc.underline(result.errorsReportPath)}`
+            ? `\nAudit Report Generated:\n${pc.underline(result.errorsReportPath)}`
             : '',
         ].join('\n'),
         pc.red(pc.bold('SYNC COMPLETED WITH ERRORS'))

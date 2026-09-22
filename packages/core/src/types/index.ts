@@ -13,35 +13,16 @@ export interface LookupConfig {
   endpoint: string;
   params: Record<string, string>; // { "paramName": "ExcelColumnName" }
   response_id_field?: string;
-  response_data_path?: string; // Path to find item in nested responses, e.g. "data" or "results"
-}
-
-export interface IdLookupConfig {
-  enabled?: boolean;
-  lookup_endpoint: string;
-  lookup_query_params: Record<string, string>;
-  response_id_field?: string;
   response_data_path?: string;
 }
 
-export type PayloadValueMapping =
-  | string // Column name, static value, or placeholder (${...}, #{...}, $ref:...)
-  | number
-  | boolean
-  | null
-  | PayloadValueMapping[]
-  | { [key: string]: any };
+export type ContentType = 'application/json' | 'multipart/form-data' | 'application/octet-stream';
 
-export interface ChildArrayMapping {
-  source_file: string;
-  link_column_parent: string;
-  link_column_child: string;
-  mapping: Record<string, any>;
-}
-
-export interface SplitStringMapping {
-  split_by: string;
-  source_column: string;
+export interface RollbackConfig {
+  enabled?: boolean;
+  method?: 'DELETE' | 'PUT' | 'PATCH' | 'POST';
+  endpoint?: string;
+  payload?: Record<string, any>;
 }
 
 export interface IntegrationStep {
@@ -51,11 +32,17 @@ export interface IntegrationStep {
   endpoint: string;
   method?: HttpMethod;
   unique_identifier?: string;
+  batch_size?: number;
+  response_id_field?: string;
+  response_data_path?: string;
   mode?: 'sync' | 'create_only' | 'update_only';
+  content_type?: ContentType;
+  expected_status?: number | number[];
   csv_options?: CsvOptions;
-  id_lookup_config?: IdLookupConfig;
-  payload_mapping: Record<string, any>;
+  lookup?: LookupConfig;
+  payload_mapping?: Record<string, any>;
   headers?: Record<string, string>;
+  rollback?: RollbackConfig;
 }
 
 export interface ApiSeederConfig {
@@ -120,4 +107,24 @@ export interface EngineOptions {
   workingDirectory?: string;
   onProgress?: (event: StepProgressEvent) => void;
   onLog?: (level: 'info' | 'warn' | 'error' | 'debug', message: string) => void;
+}
+
+export interface RollbackOptions {
+  dryRun?: boolean;
+  force?: boolean;
+  workingDirectory?: string;
+  onProgress?: (event: {
+    stepName: string;
+    entityId: string;
+    status: 'deleted' | 'failed' | 'skipped';
+    message?: string;
+  }) => void;
+  onLog?: (level: 'info' | 'warn' | 'error' | 'debug', message: string) => void;
+}
+
+export interface RollbackResult {
+  success: boolean;
+  totalDeleted: number;
+  totalFailed: number;
+  durationMs: number;
 }

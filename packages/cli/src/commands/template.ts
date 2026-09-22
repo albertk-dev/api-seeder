@@ -4,7 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { safeValidateConfig, TemplateGenerator } from '@api-seeder/core';
+import { safeValidateConfig, TemplateGenerator, loadEnvFile, resolveEnvVariables } from '@api-seeder/core';
 
 export async function runTemplate(configPath: string, options: { output?: string }): Promise<void> {
   p.intro(pc.bgGreen(pc.black(' API Seeder ')) + pc.bold(' Excel Template Generator'));
@@ -28,7 +28,10 @@ export async function runTemplate(configPath: string, options: { output?: string
     process.exit(1);
   }
 
-  const parseResult = safeValidateConfig(rawConfig);
+  loadEnvFile(basePath);
+  const configWithEnv = resolveEnvVariables(rawConfig);
+
+  const parseResult = safeValidateConfig(configWithEnv);
   if (!parseResult.success) {
     p.cancel(pc.red('Cannot generate templates: configuration has schema errors.'));
     process.exit(1);
@@ -39,7 +42,11 @@ export async function runTemplate(configPath: string, options: { output?: string
   spinner.start('Analyzing configuration mappings and generating blank Excel sheets...');
 
   try {
-    const generated = await TemplateGenerator.generateTemplates(parseResult.data, outputDir, basePath);
+    const resolvedOutput = path.resolve(basePath, outputDir);
+    const generated = await TemplateGenerator.generateTemplates(parseResult.data, {
+      outputDir: resolvedOutput,
+      overwrite: true,
+    });
     spinner.stop(pc.green('Templates generated successfully!'));
 
     const summaryLines = generated.map(

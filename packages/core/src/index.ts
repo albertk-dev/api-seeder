@@ -9,3 +9,5 @@ export * from './resolver/index.js';
 export * from './reporter/index.js';
 export * from './generator/index.js';
 export * from './engine/index.js';
+export * from './transformers/index.js';
+export * from './env/index.js';

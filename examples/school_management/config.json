@@ -1,54 +1,96 @@
 {
   "$schema": "../../schema.json",
-  "api_base_url": "https://api.sprintpay-education.cm/v1",
+  "api_base_url": "${env:API_BASE_URL:-https://api.school-management.example.com/v1}",
   "use_id_cache": true,
   "id_cache_file": ".id_cache.json",
   "global_headers": {
-    "Authorization": "Bearer DEMO_TOKEN_SPRINT_PAY_2026",
+    "Authorization": "${env:API_AUTH_TOKEN:-Bearer DEMO_ENTERPRISE_KEY_2026}",
     "Content-Type": "application/json"
   },
   "integration_steps": [
     {
       "name": "etablissements",
       "enabled": true,
-      "source_file": "data/etablissements.xlsx",
+      "source_file": "data/etablissements.csv",
       "endpoint": "/etablissements",
       "method": "POST",
+      "expected_status": [200, 201],
       "unique_identifier": "CodeEtab",
       "payload_mapping": {
-        "nom": "{{Nom}}",
+        "nom": "{{ Nom | trim | uppercase }}",
         "code": "CodeEtab",
         "ville": "Ville",
-        "statut": "Statut"
+        "statut": "Statut",
+        "logo_base64": "{{ Logo | file_base64:'data/assets/logos' }}"
+      },
+      "rollback": {
+        "enabled": true,
+        "method": "DELETE",
+        "endpoint": "/etablissements/:id"
       }
     },
     {
       "name": "classes",
       "enabled": true,
-      "source_file": "data/classes.xlsx",
+      "source_file": "data/classes.csv",
       "endpoint": "/classes",
       "method": "POST",
+      "expected_status": 201,
       "unique_identifier": "CodeClasse",
       "payload_mapping": {
-        "nom_classe": "{{Nom}}",
+        "nom_classe": "{{ Nom | trim }}",
         "code_classe": "CodeClasse",
-        "capacite_max": "CapaciteMax",
-        "etablissement_id": "${etablissements.id:CodeEtab}"
+        "capacite_max": "{{ CapaciteMax || 30 }}",
+        "etablissement_id": "@etablissements(CodeEtab)"
+      },
+      "rollback": {
+        "enabled": true,
+        "method": "DELETE",
+        "endpoint": "/classes/:id"
+      }
+    },
+    {
+      "name": "upload_photos_eleves",
+      "enabled": true,
+      "source_file": "data/eleves.csv",
+      "endpoint": "${env:STORAGE_UPLOAD_URL:-https://storage.cloud-ecoles.cm/v1/uploads}",
+      "method": "POST",
+      "content_type": "multipart/form-data",
+      "expected_status": [200, 201],
+      "unique_identifier": "Matricule",
+      "response_id_field": "url",
+      "payload_mapping": {
+        "file": "@file(data/assets/photos/{{Photo}})",
+        "folder": "students/avatars"
+      },
+      "rollback": {
+        "enabled": false
       }
     },
     {
       "name": "eleves",
       "enabled": true,
-      "source_file": "data/eleves.xlsx",
+      "source_file": "data/eleves.csv",
       "endpoint": "/eleves",
       "method": "POST",
+      "expected_status": 201,
       "unique_identifier": "Matricule",
       "payload_mapping": {
-        "nom_complet": "{{NomComplet}}",
         "matricule": "Matricule",
-        "date_naissance": "DateNaissance",
+        "nom_complet": "{{ NomComplet | trim }}",
+        "date_naissance": "{{ DateNaissance | date:'YYYY-MM-DD' }}",
         "sexe": "Sexe",
-        "classe_id": "${classes.id:CodeClasse}"
+        "classe_id": "@classes(CodeClasse)",
+        "photo_url": "@upload_photos_eleves(Matricule)"
+      },
+      "rollback": {
+        "enabled": true,
+        "method": "PATCH",
+        "endpoint": "/eleves/:id",
+        "payload": {
+          "statut": "ARCHIVE",
+          "motif_archivage": "Annulation injection Seeder"
+        }
       }
     }
   ]

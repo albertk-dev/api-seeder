@@ -4,7 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { safeValidateConfig, FileParser, TemplateGenerator } from '@api-seeder/core';
+import { safeValidateConfig, FileParser, TemplateGenerator, loadEnvFile, resolveEnvVariables } from '@api-seeder/core';
 
 export async function runValidate(configPath: string): Promise<void> {
   p.intro(pc.bgMagenta(pc.black(' API Seeder ')) + pc.bold(' Configuration & Schema Validator'));
@@ -28,8 +28,12 @@ export async function runValidate(configPath: string): Promise<void> {
     process.exit(1);
   }
 
-  // 1. Validate Schema
-  const parseResult = safeValidateConfig(rawConfig);
+  // 1. Resolve Environment Variables (${env:VAR})
+  loadEnvFile(basePath);
+  const configWithEnv = resolveEnvVariables(rawConfig);
+
+  // 2. Validate Schema
+  const parseResult = safeValidateConfig(configWithEnv);
   if (!parseResult.success) {
     p.log.error(pc.red('Schema validation errors:'));
     parseResult.error.errors.forEach((e) => {
@@ -39,7 +43,7 @@ export async function runValidate(configPath: string): Promise<void> {
     process.exit(1);
   }
 
-  p.log.success(pc.green('✔ Schema structure is valid (Zod verified)'));
+  p.log.success(pc.green('Schema structure is valid (Zod verified)'));
 
   const config = parseResult.data;
   const parser = new FileParser();
@@ -50,7 +54,7 @@ export async function runValidate(configPath: string): Promise<void> {
     const filePath = path.resolve(basePath, step.source_file);
     try {
       await fs.access(filePath);
-      p.log.success(pc.green(`✔ Step '${step.name}': Source file exists (${step.source_file})`));
+      p.log.success(pc.green(`Step '${step.name}': Source file exists (${step.source_file})`));
 
       // Check columns
       const headers = await parser.getHeaders(step.source_file, {
@@ -65,17 +69,17 @@ export async function runValidate(configPath: string): Promise<void> {
         hasWarningsOrErrors = true;
         p.log.error(
           pc.red(
-            `✖ Step '${step.name}': Missing columns in '${path.basename(step.source_file)}': ${pc.bold(
+            `Step '${step.name}': Missing columns in '${path.basename(step.source_file)}': ${pc.bold(
               missingColumns.join(', ')
             )}`
           )
         );
       } else {
-        p.log.success(pc.green(`✔ Step '${step.name}': All ${requiredColumns.length} required columns found`));
+        p.log.success(pc.green(`Step '${step.name}': All ${requiredColumns.length} required columns found`));
       }
     } catch {
       hasWarningsOrErrors = true;
-      p.log.error(pc.red(`✖ Step '${step.name}': File not found: ${step.source_file}`));
+      p.log.error(pc.red(`Step '${step.name}': File not found: ${step.source_file}`));
     }
   }
 
@@ -84,11 +88,11 @@ export async function runValidate(configPath: string): Promise<void> {
     process.exit(1);
   } else {
     p.note(
-      `${pc.green('✔')} API Endpoint: ${pc.bold(config.api_base_url)}\n` +
-      `${pc.green('✔')} Total Steps: ${pc.bold(String(config.integration_steps.length))}\n` +
-      `${pc.green('✔')} Ready for execution: npx api-seeder sync ${configPath}`,
+      `${pc.cyan('Endpoint:')} ${pc.bold(config.api_base_url)}\n` +
+      `${pc.cyan('Steps:')}    ${pc.bold(String(config.integration_steps.length))}\n` +
+      `${pc.cyan('Run:')}      npx api-seeder sync ${configPath}`,
       pc.green('VALIDATION PASSED')
     );
-    p.outro(pc.green('Your configuration is 100% sound and ready to run!'));
+    p.outro(pc.green('Configuration is verified and ready for execution.'));
   }
 }

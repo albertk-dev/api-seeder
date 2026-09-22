@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url';
 import open from 'open';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { SeederEngine, FileParser, TemplateGenerator, validateConfig, safeValidateConfig } from '@api-seeder/core';
+import { SeederEngine, FileParser, TemplateGenerator, validateConfig, safeValidateConfig, loadEnvFile, resolveEnvVariables } from '@api-seeder/core';
 
 export interface StudioOptions {
   port?: number;
   config?: string;
+  open?: boolean;
 }
 
 export async function runStudio(options: StudioOptions = {}): Promise<void> {
@@ -59,7 +60,8 @@ export async function runStudio(options: StudioOptions = {}): Promise<void> {
         req.on('end', async () => {
           try {
             const parsed = JSON.parse(body);
-            validateConfig(parsed);
+            loadEnvFile(workingDir);
+            validateConfig(resolveEnvVariables(parsed));
             await fs.writeFile(configPath, JSON.stringify(parsed, null, 2), 'utf-8');
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
@@ -98,7 +100,8 @@ export async function runStudio(options: StudioOptions = {}): Promise<void> {
         try {
           const content = await fs.readFile(configPath, 'utf-8');
           const rawConfig = JSON.parse(content);
-          const validation = safeValidateConfig(rawConfig);
+          loadEnvFile(workingDir);
+          const validation = safeValidateConfig(resolveEnvVariables(rawConfig));
 
           if (!validation.success) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -120,7 +123,8 @@ export async function runStudio(options: StudioOptions = {}): Promise<void> {
         try {
           const content = await fs.readFile(configPath, 'utf-8');
           const rawConfig = JSON.parse(content);
-          const validation = safeValidateConfig(rawConfig);
+          loadEnvFile(workingDir);
+          const validation = safeValidateConfig(resolveEnvVariables(rawConfig));
           if (!validation.success) {
             throw new Error('Schema validation error');
           }
@@ -186,10 +190,12 @@ export async function runStudio(options: StudioOptions = {}): Promise<void> {
 
   server.listen(port, () => {
     const url = `http://localhost:${port}`;
-    p.log.success(pc.green(`✔ API Seeder Studio running at: ${pc.bold(pc.underline(url))}`));
+    p.log.success(pc.green(`API Seeder Studio running at: ${pc.bold(pc.underline(url))}`));
     p.log.info(pc.cyan(`Loaded configuration: ${pc.bold(configPath)}`));
     p.log.info(pc.dim('Press Ctrl+C in terminal to stop Studio.'));
-    open(url).catch(() => {});
+    if (options.open !== false) {
+      open(url).catch(() => {});
+    }
   });
 }
 

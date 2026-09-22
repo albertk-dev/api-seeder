@@ -28,6 +28,7 @@ const elements = {
   btnRunSync: document.getElementById('btn-run-sync'),
   btnValidate: document.getElementById('btn-validate'),
   btnTemplates: document.getElementById('btn-templates'),
+  btnInspectConfig: document.getElementById('btn-inspect-config'),
   previewTitle: document.getElementById('preview-title'),
   previewTableHead: document.getElementById('preview-table-head'),
   previewTableBody: document.getElementById('preview-table-body'),
@@ -38,6 +39,18 @@ const elements = {
   metricErrors: document.getElementById('metric-errors'),
   metricDuration: document.getElementById('metric-duration'),
   auditStatusText: document.getElementById('audit-status-text'),
+  // Modal & Inspector Elements
+  modalBackdrop: document.getElementById('config-modal-backdrop'),
+  modalPanel: document.getElementById('config-modal-panel'),
+  modalCloseBtn: document.getElementById('modal-close-btn'),
+  modalDragHandle: document.getElementById('modal-drag-handle'),
+  tabBtnVisual: document.getElementById('tab-btn-visual'),
+  tabBtnRaw: document.getElementById('tab-btn-raw'),
+  tabContentVisual: document.getElementById('tab-content-visual'),
+  tabContentRaw: document.getElementById('tab-content-raw'),
+  configJsonDisplay: document.getElementById('config-json-display'),
+  btnCopyJson: document.getElementById('btn-copy-json'),
+  copyBtnLabel: document.getElementById('copy-btn-label'),
 };
 
 /**
@@ -45,6 +58,7 @@ const elements = {
  */
 async function init() {
   bindEvents();
+  setupConfigModal();
   await loadConfig();
 }
 
@@ -133,7 +147,7 @@ function renderSteps() {
     // Extract parent reference if available
     let parentRef = null;
     for (const val of Object.values(step.payload_mapping || {})) {
-      if (typeof val === 'string' && (val.startsWith('${') || val.startsWith('$ref:'))) {
+      if (typeof val === 'string' && (val.startsWith('@') || val.startsWith('${'))) {
         parentRef = val;
         break;
       }
@@ -150,7 +164,9 @@ function renderSteps() {
         </span>
       </div>
       <div class="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] truncate">
-        <span>📄</span>
+        <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
         <span class="truncate">${step.source_file}</span>
       </div>
       ${
@@ -172,7 +188,9 @@ function renderSteps() {
       connector.className = 'flex items-center justify-center my-1';
       connector.innerHTML = `
         <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono text-cyan-400/80">
-          <span>↓</span>
+          <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+          </svg>
           <span class="tracking-wider uppercase text-[9px]">Pass ID Map</span>
         </div>
       `;
@@ -306,13 +324,13 @@ function handleRunSync() {
     elements.terminalProgress.style.width = '100%';
 
     if (result.success) {
-      addLog(`✔ Synchronization completed successfully in ${duration}s!`, 'success');
+      addLog(`[OK] Synchronization completed successfully in ${duration}s!`, 'success');
       elements.auditStatusText.textContent = 'Last execution passed with zero errors';
       elements.auditStatusText.className = 'text-xs text-emerald-400 font-medium';
     } else {
-      addLog(`✖ Synchronization completed with ${result.totalFailed} failure(s).`, 'error');
+      addLog(`[FAIL] Synchronization completed with ${result.totalFailed} failure(s).`, 'error');
       if (result.errorsReportPath) {
-        addLog(`📊 Error audit generated: ${result.errorsReportPath}`, 'warn');
+        addLog(`[REPORT] Error audit generated: ${result.errorsReportPath}`, 'warn');
         elements.auditStatusText.textContent = `Report saved: ${result.errorsReportPath.split(/[\\/]/).pop()}`;
         elements.auditStatusText.className = 'text-xs text-rose-400 font-medium';
       }
@@ -342,9 +360,9 @@ async function handleValidate() {
     const res = await fetch('/api/validate', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      addLog('✔ Schema and all column mappings are 100% sound!', 'success');
+      addLog('[OK] Schema and all column mappings are 100% sound!', 'success');
     } else {
-      addLog(`✖ Validation failed: ${data.error || 'Check columns and paths'}`, 'error');
+      addLog(`[FAIL] Validation failed: ${data.error || 'Check columns and paths'}`, 'error');
     }
   } catch (err) {
     addLog(`[ERR] Validation error: ${err.message}`, 'error');
@@ -360,13 +378,220 @@ async function handleGenerateTemplates() {
     const res = await fetch('/api/templates', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      addLog(`✔ Generated ${data.count} templates in directory: ${data.outputDir}`, 'success');
+      addLog(`[OK] Generated ${data.count} templates in directory: ${data.outputDir}`, 'success');
     } else {
-      addLog(`✖ Template generation error: ${data.error}`, 'error');
+      addLog(`[FAIL] Template generation error: ${data.error}`, 'error');
     }
   } catch (err) {
     addLog(`[ERR] Template error: ${err.message}`, 'error');
   }
+}
+
+/**
+ * Configures the responsive Config Inspector modal (Desktop) and bottom-sheet (Mobile).
+ */
+function setupConfigModal() {
+  if (!elements.btnInspectConfig || !elements.modalBackdrop) return;
+
+  // Open modal / bottom sheet
+  elements.btnInspectConfig.addEventListener('click', openConfigModal);
+
+  // Close modal triggers
+  elements.modalCloseBtn?.addEventListener('click', closeConfigModal);
+  elements.modalDragHandle?.addEventListener('click', closeConfigModal);
+  elements.modalBackdrop.addEventListener('click', (e) => {
+    if (e.target === elements.modalBackdrop) closeConfigModal();
+  });
+
+  // Close on Escape key
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elements.modalBackdrop.classList.contains('active')) {
+      closeConfigModal();
+    }
+  });
+
+  // Tab switching: Visual View vs Raw JSON
+  elements.tabBtnVisual?.addEventListener('click', () => switchModalTab('visual'));
+  elements.tabBtnRaw?.addEventListener('click', () => switchModalTab('raw'));
+
+  // Copy Raw JSON to Clipboard
+  elements.btnCopyJson?.addEventListener('click', () => {
+    if (!state.config) return;
+    navigator.clipboard.writeText(JSON.stringify(state.config, null, 2)).then(() => {
+      elements.copyBtnLabel.textContent = 'Copied!';
+      setTimeout(() => {
+        elements.copyBtnLabel.textContent = 'Copy JSON';
+      }, 2000);
+    });
+  });
+}
+
+/**
+ * Opens the configuration inspector and renders the latest config data.
+ */
+function openConfigModal() {
+  if (!state.config) return;
+  renderVisualConfig(state.config);
+  elements.configJsonDisplay.textContent = JSON.stringify(state.config, null, 2);
+
+  elements.modalBackdrop.classList.add('active');
+  elements.modalPanel.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Closes the configuration inspector.
+ */
+function closeConfigModal() {
+  elements.modalBackdrop.classList.remove('active');
+  elements.modalPanel.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+/**
+ * Switches between Visual View and Raw JSON tabs.
+ */
+function switchModalTab(tab) {
+  if (tab === 'visual') {
+    elements.tabBtnVisual.className = 'px-2.5 py-1 rounded-md font-medium text-cyan-400 bg-slate-800 shadow-sm transition';
+    elements.tabBtnRaw.className = 'px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition';
+    elements.tabContentVisual.classList.remove('hidden');
+    elements.tabContentRaw.classList.add('hidden');
+  } else {
+    elements.tabBtnRaw.className = 'px-2.5 py-1 rounded-md font-medium text-cyan-400 bg-slate-800 shadow-sm transition';
+    elements.tabBtnVisual.className = 'px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition';
+    elements.tabContentRaw.classList.remove('hidden');
+    elements.tabContentVisual.classList.add('hidden');
+  }
+}
+
+/**
+ * Renders the visual representation of the configuration.
+ */
+function renderVisualConfig(cfg) {
+  if (!elements.tabContentVisual) return;
+
+  const steps = cfg.integration_steps || [];
+  const headers = cfg.global_headers || {};
+
+  elements.tabContentVisual.innerHTML = `
+    <!-- Top System Card: Target API & Global Settings -->
+    <div class="p-4 rounded-xl bg-[#090D16] border border-slate-800 flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 glow-emerald"></span>
+          <span class="text-xs font-mono text-slate-400">Target Base URL:</span>
+          <span class="text-xs font-mono font-bold text-cyan-400 select-all">${cfg.api_base_url || 'N/A'}</span>
+        </div>
+        <div class="flex items-center gap-2 font-mono text-[11px]">
+          <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+            ID Cache: <strong class="${cfg.use_id_cache ? 'text-emerald-400' : 'text-slate-500'}">${cfg.use_id_cache ? 'Enabled' : 'Disabled'}</strong>
+          </span>
+          ${cfg.id_cache_file ? `<span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">${cfg.id_cache_file}</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Global Headers Pills -->
+      <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center gap-1.5">
+        <span class="text-[11px] font-mono text-slate-500">Headers:</span>
+        ${
+          Object.keys(headers).length > 0
+            ? Object.entries(headers)
+                .map(
+                  ([k, v]) => `
+              <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-300">
+                <span class="text-slate-400">${k}:</span> <span class="text-cyan-400">${String(v).slice(0, 24)}${String(v).length > 24 ? '...' : ''}</span>
+              </span>`
+                )
+                .join('')
+            : '<span class="text-xs text-slate-600 font-mono">None</span>'
+        }
+      </div>
+    </div>
+
+    <!-- Pipeline Steps Architecture Cards -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+          Sequential Ingestion Stages (${steps.length})
+        </span>
+      </div>
+
+      ${steps
+        .map((step, idx) => {
+          const mappings = Object.entries(step.payload_mapping || {});
+          return `
+        <div class="p-4 rounded-xl bg-[#090D16] border border-slate-800 hover:border-slate-700 transition flex flex-col gap-3">
+          <!-- Step Header -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <span class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-mono text-[11px] text-cyan-400 font-bold">
+                ${idx + 1}
+              </span>
+              <span class="font-bold text-sm text-slate-100 font-mono">${step.name}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-cyan-400 font-bold uppercase">
+                ${step.method || 'POST'}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 font-mono text-[11px]">
+              <span class="text-slate-400">Endpoint:</span>
+              <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200">${step.endpoint}</span>
+            </div>
+          </div>
+
+          <!-- Step Meta: Source file & Unique key -->
+          <div class="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-400 bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <span>Source: <strong class="text-slate-300">${step.source_file}</strong></span>
+            </div>
+            <span class="text-slate-700">|</span>
+            <div>Unique Key: <strong class="text-emerald-400">${step.unique_identifier}</strong></div>
+          </div>
+
+          <!-- Payload Mapping Grid -->
+          <div class="rounded-lg border border-slate-800/80 overflow-hidden">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-slate-900/80 text-slate-400 text-[10px] uppercase">
+                <tr>
+                  <th class="py-1.5 px-3">Target Payload Key</th>
+                  <th class="py-1.5 px-3">Resolution Formula / Field</th>
+                  <th class="py-1.5 px-3 text-right">Type</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/40 text-slate-300">
+                ${mappings
+                  .map(([k, v]) => {
+                    let typeBadge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Direct</span>';
+                    let valDisplay = `<span class="text-slate-300">${v}</span>`;
+
+                    if (typeof v === 'string' && (v.startsWith('@') || v.startsWith('${'))) {
+                      typeBadge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Lookup ID</span>';
+                      valDisplay = `<span class="text-blue-400 font-semibold">${v}</span>`;
+                    } else if (typeof v === 'string' && v.includes('{{')) {
+                      typeBadge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">Template</span>';
+                      valDisplay = `<span class="text-purple-400">${v}</span>`;
+                    }
+
+                    return `
+                  <tr class="hover:bg-slate-800/30">
+                    <td class="py-1.5 px-3 font-semibold text-cyan-400">${k}</td>
+                    <td class="py-1.5 px-3">${valDisplay}</td>
+                    <td class="py-1.5 px-3 text-right">${typeBadge}</td>
+                  </tr>`;
+                  })
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+        })
+        .join('')}
+    </div>
+  `;
 }
 
 /**
@@ -390,3 +615,4 @@ function addLog(text, level = 'info') {
 
 // Start application
 window.addEventListener('DOMContentLoaded', init);
+

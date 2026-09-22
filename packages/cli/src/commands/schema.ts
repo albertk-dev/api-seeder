@@ -11,5 +11,5 @@ export async function runSchema(options: { output?: string }): Promise<void> {
   const outputPath = path.resolve(options.output || './schema.json');
 
   await fs.writeFile(outputPath, JSON.stringify(schema, null, 2), 'utf-8');
-  p.log.success(pc.green(`✔ JSON Schema written to: ${outputPath}`));
+  p.log.success(pc.green(`JSON Schema written to: ${outputPath}`));
 }

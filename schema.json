@@ -42,7 +42,7 @@
                 "additionalProperties": {
                   "type": "string"
                 },
-                "description": "Mapping of API query param to Excel column name"
+                "description": "Query parameter to Excel column name mapping"
               },
               "response_id_field": {
                 "type": "string",
@@ -94,6 +94,18 @@
               "unique_identifier": {
                 "type": "string"
               },
+              "batch_size": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "default": 1
+              },
+              "response_id_field": {
+                "type": "string",
+                "default": "id"
+              },
+              "response_data_path": {
+                "type": "string"
+              },
               "mode": {
                 "type": "string",
                 "enum": [
@@ -102,6 +114,28 @@
                   "update_only"
                 ],
                 "default": "sync"
+              },
+              "content_type": {
+                "type": "string",
+                "enum": [
+                  "application/json",
+                  "multipart/form-data",
+                  "application/octet-stream"
+                ],
+                "default": "application/json"
+              },
+              "expected_status": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                ]
               },
               "csv_options": {
                 "type": "object",
@@ -124,54 +158,52 @@
                 },
                 "additionalProperties": true
               },
-              "id_lookup_config": {
-                "type": "object",
-                "properties": {
-                  "enabled": {
-                    "type": "boolean",
-                    "default": true
-                  },
-                  "lookup_endpoint": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "lookup_query_params": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "string"
-                    }
-                  },
-                  "response_id_field": {
-                    "type": "string",
-                    "default": "id"
-                  },
-                  "response_data_path": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "lookup_endpoint",
-                  "lookup_query_params"
-                ],
-                "additionalProperties": false
+              "lookup": {
+                "$ref": "#/definitions/ApiSeederConfig/properties/lookups/additionalProperties"
               },
               "payload_mapping": {
                 "type": "object",
                 "additionalProperties": {},
-                "description": "JSON payload mapping structure"
+                "description": "JSON payload mapping structure (auto-mapped if omitted)"
               },
               "headers": {
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
                 }
+              },
+              "rollback": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "DELETE",
+                      "PUT",
+                      "PATCH",
+                      "POST"
+                    ],
+                    "default": "DELETE"
+                  },
+                  "endpoint": {
+                    "type": "string"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "required": [
               "name",
               "source_file",
-              "endpoint",
-              "payload_mapping"
+              "endpoint"
             ],
             "additionalProperties": false
           },
